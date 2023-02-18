@@ -1,5 +1,7 @@
 # RogueLikeGameDirectX
 
+A game I'm currently working on.
+
 # Main Menu
 ![](ScreenShots/MainMenu.png)
 ![](ScreenShots/HoveringCredits.png)
