@@ -16,10 +16,10 @@ public:
         float aspectRatio = (float)width / (float)height;
         Vertex OurVertices[] =
         {
-            XMFLOAT2(-0.60 * aspectRatio, -0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0, 1),
-            XMFLOAT2(-0.60 * aspectRatio, 0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0, 0),
-            XMFLOAT2(0.60 * aspectRatio, 0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1, 0),
-            XMFLOAT2(0.60 * aspectRatio, -0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1, 1)
+            XMFLOAT2(-0.650 * aspectRatio, -0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0, 1),
+            XMFLOAT2(-0.650 * aspectRatio, 0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0, 0),
+            XMFLOAT2(0.650 * aspectRatio, 0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1, 0),
+            XMFLOAT2(0.650 * aspectRatio, -0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1, 1)
         };
         DWORD indices[] = {
             0, 1, 2,
@@ -76,7 +76,7 @@ public:
                     distance = sqrt(pow(this->x - pos_x, 2) + pow(this->y - pos_y, 2));
                     distance = smoothstep(0.0f, 3.0f, distance);
                     dashState = Dashing;
-                    this->facingRight = (pt.x < this->x) ? true : false;
+                    this->facingRight = (pos_x < this->x) ? true : false;
                 }
                 break;
             case Dashing: {
@@ -152,6 +152,7 @@ public:
     };
     DashStates dashState;
     POINT pt;
+    bool facingRight = false;
 private:
     double dt = 0;
     float distance, angle;
@@ -174,7 +175,7 @@ private:
     int frame = 0, hitFrame = 0, dashFrame = 0;
     Sprite* spriteLoader;
     Graphics* gfx;
-    bool facingRight = false, isMoving = false;
+    bool isMoving = false;
     std::chrono::time_point<std::chrono::high_resolution_clock> hitCooldownStart;
     bool hitEnabled = true;
 };

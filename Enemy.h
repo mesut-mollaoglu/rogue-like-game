@@ -41,9 +41,10 @@ public:
 		this->enemyMoving = this->spriteLoader->LoadFromDir(moveDir, width, height);
 		this->enemyIdle = this->spriteLoader->LoadFromDir(idleDir, width, height);
 		this->enemyDead = this->spriteLoader->LoadFromDir(deadDir, width, height);
+		this->isSpawning = true;
+		states = Spawn;
 	}
 	void Render() {
-		if (isDead) return;
 		if (this->moving) this->currentFrame = this->enemyMoving[(this->frame / 24) % 2];
 		if (this->attacking) {
 			if (this->hitFrame < 81) {
@@ -61,7 +62,6 @@ public:
 		if (this->idle) {
 			this->currentFrame = this->enemyIdle[(this->frame / 24) % 2];
 		}
-		
 		else if(health <= 0) {
 			if (this->deadFrame < 90) {
 				this->currentFrame = this->enemyDead[deadFrame / 10];
@@ -69,10 +69,9 @@ public:
 			}
 			if (this->deadFrame == 90) isDead = true;
 		}
-		//if (!isDead && this->currentFrame != nullptr) 
-			//this->spriteLoader->DrawTexture(this->currentFrame, this->x, this->y, this->facingRight);
 	}
 	void Update(float character_x, float character_y) {
+		
 		if (isDead) {
 			enemyAttack.clear();
 			enemyMoving.clear();
@@ -86,7 +85,7 @@ public:
 			m_time += m_deltaTime;
 		}
 		this->FollowTarget(character_x, character_y, this->elapsedTime);
-		this->facingRight = (this->x > x) ? true : false;
+		this->facingRight = (this->x > character_x) ? true : false;
 		frame++;		
 	}
 
@@ -98,7 +97,7 @@ public:
 		float distance_x = XMVectorGetX(XMVector2Length(delta));
 		float distance_y = XMVectorGetY(XMVector2Length(delta));
 		float distance = sqrt(distance_x * distance_x + distance_y * distance_y);
-		if (abs(distance) < 4500.0f && abs(distance) > 550.0f && !this->attacking) {
+		if (abs(distance) < 7000.0f && abs(distance) > 550.0f && !this->attacking) {
 			this->moving = true;
 			this->attacking = false;
 			this->idle = false;
@@ -110,7 +109,7 @@ public:
 			this->x += direction.m128_f32[0] * t * 10.0f;
 			this->y += direction.m128_f32[1] * t * 10.0f;
 		}
-		else if (abs(distance) > 4500.0f) {
+		else if (abs(distance) > 7000.0f) {
 			this->moving = false;
 			this->attacking = false;
 			this->idle = true;
@@ -128,6 +127,16 @@ public:
 	float width, height;
 	int hitFrame = 0;
 	bool damageEnabled = true, isDead;
+	bool facingRight = false;
+	bool isSpawning = false;
+	enum EnemyStates {
+		Spawn,
+		Idle,
+		Attacking,
+		Following,
+		Dead
+	};
+	EnemyStates states;
 private:
 	Graphics* gfx;
 	std::vector<ID3D11ShaderResourceView*> enemyAttack;
@@ -153,5 +162,4 @@ private:
 	Sprite* spriteLoader;
 	float threshold = 150.0f, speed = 4.0f;
 	bool isHitting, isMoving;
-	bool facingRight;
 };

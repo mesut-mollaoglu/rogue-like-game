@@ -35,7 +35,7 @@ public:
 		UINT destinationHeight);
 	void DrawTexture(ID3D11ShaderResourceView* image, float x, float y, bool flip);
 	IWICImagingFactory* factory;
-	bool CheckCollision(Character* character, Enemy* enemy);
+	uint8_t CheckCollision(Character* character, Enemy* enemy);
 protected:
 	Graphics* gfx;
 };

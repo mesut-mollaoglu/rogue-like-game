@@ -13,6 +13,30 @@ Graphics::~Graphics() {
 	if (this->textFormat) this->textFormat->Release();
 }
 
+void Graphics::Clear(float r, float g, float b, float a)
+{
+	const float color[4] = { r, g, b, a };
+ 	this->d3dDeviceContext->ClearRenderTargetView(this->renderTargetView.Get(), color);
+}
+
+void Graphics::Begin()
+{
+	this->d3dDeviceContext->OMSetDepthStencilState(this->depthStencilState.Get(), 1);
+	this->d3dDeviceContext->RSSetState(this->rasterizerState.Get());
+	this->d3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	this->d3dDeviceContext->VSSetShader(this->vertexShader.Get(), nullptr, 0);
+	this->d3dDeviceContext->PSSetShader(this->mainPixelShader.Get(), nullptr, 0);
+	this->d3dDeviceContext->PSSetConstantBuffers(0, 1, this->constantBuffer.GetAddressOf());
+	this->d3dDeviceContext->IASetInputLayout(this->inputLayout.Get());
+	this->d3dDeviceContext->PSSetSamplers(0, 1, this->samplerState.GetAddressOf());
+	this->d3dDeviceContext->VSSetConstantBuffers(1, 1, this->projectionBuffer.GetAddressOf());
+}
+
+void Graphics::End()
+{
+	this->swapChain->Present(1, NULL);
+}
+
 HRESULT Graphics::InitWritingFactory() {
 	HRESULT hr;
 	hr = DWriteCreateFactory(
@@ -110,7 +134,7 @@ bool Graphics::InitGraphics(HWND hwnd) {
 	if (SUCCEEDED(hr)) this->d3dDeviceContext->OMSetDepthStencilState(this->depthStencilState.Get(), 1);
 	D3D11_RASTERIZER_DESC rasterizerDesc;
 	ZeroMemory(&rasterizerDesc, sizeof(rasterizerDesc));
-	rasterizerDesc.CullMode = D3D11_CULL_BACK;
+	rasterizerDesc.CullMode = D3D11_CULL_NONE;
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
 	hr = this->d3dDevice->CreateRasterizerState(&rasterizerDesc, rasterizerState.GetAddressOf());
 	if (SUCCEEDED(hr)) this->d3dDeviceContext->RSSetState(this->rasterizerState.Get());
@@ -134,16 +158,16 @@ bool Graphics::InitGraphics(HWND hwnd) {
 	this->d3dDeviceContext->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), depthStencilView);
 	D3D11_SAMPLER_DESC samplerDesc;
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 1;
 	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
+	samplerDesc.BorderColor[0] = 1.0f;
+	samplerDesc.BorderColor[1] = 1.0f;
+	samplerDesc.BorderColor[2] = 1.0f;
+	samplerDesc.BorderColor[3] = 1.0f;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 	this->d3dDevice.Get()->CreateSamplerState(&samplerDesc, samplerState.GetAddressOf());
@@ -168,8 +192,18 @@ bool Graphics::InitGraphics(HWND hwnd) {
 	}
 	//Input layout, pixel shader and vertex shader creation.
 	{
+	ID3DBlob* pixelShaderBlob;
+	HRESULT hr = D3DCompileFromFile(L"MainPixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG, 0, &pixelShaderBlob, nullptr);
+	if (FAILED(hr)) {
+		hr = D3DCompileFromFile(L"MainPixelShader.cso", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG, 0, &pixelShaderBlob, nullptr);
+	}
+	assert(SUCCEEDED(hr));
+	hr = this->d3dDevice.Get()->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), nullptr,
+		mainPixelShader.GetAddressOf());
+	if (FAILED(hr)) { MessageBox(hwnd, L"Error: Can't create shader.", L"Error", MB_OK); }
+	pixelShaderBlob->Release();
 	ID3DBlob* shaderBlob;
-	HRESULT hr = D3DCompileFromFile(L"PixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG, 0, &shaderBlob, nullptr);
+	hr = D3DCompileFromFile(L"PixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG, 0, &shaderBlob, nullptr);
 	if (FAILED(hr)) {
 		hr = D3DCompileFromFile(L"PixelShader.cso", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG, 0, &shaderBlob, nullptr); 
 	}

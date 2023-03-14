@@ -15,6 +15,7 @@
 #include <utility>
 
 using namespace DirectX;
+using Microsoft::WRL::ComPtr;
 
 class Graphics {
 public:
@@ -43,43 +44,53 @@ public:
 		XMFLOAT2 paddingUnused;
 		XMFLOAT4 horizontalScale;
 	};
+	struct CollisionConstants
+	{
+		XMFLOAT2 pos;
+		XMFLOAT2 paddingUnused;
+		XMFLOAT4 collisionValues;
+	};
 	struct ProjectionBuffer
 	{
 		XMMATRIX proj;
 		XMMATRIX world;
 		XMMATRIX view;
 	};
+	void Clear(float r, float g, float b, float a);
+	void Begin();
+	void End();
 	HRESULT InitWritingFactory();
 	UINT stride, offset;
 	HWND windowHandle;
-	Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> projectionBuffer;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> enemyConstantBuffer;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> constantBuffer;
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState;
-	Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
-	Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
-	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> blackColor;
-	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> whiteColor;
-	Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> snowColor;
+	ComPtr<ID3D11InputLayout> inputLayout;
+	ComPtr<ID3D11Buffer> projectionBuffer;
+	ComPtr<ID3D11Buffer> enemyConstantBuffer;
+	ComPtr<ID3D11Buffer> constantBuffer;
+	ComPtr<ID3D11SamplerState> samplerState;
+	ComPtr<ID3D11PixelShader> mainPixelShader;
+	ComPtr<ID3D11PixelShader> pixelShader;
+	ComPtr<ID3D11VertexShader> vertexShader;
+	ComPtr<ID2D1SolidColorBrush> blackColor;
+	ComPtr<ID2D1SolidColorBrush> whiteColor;
+	ComPtr<ID2D1SolidColorBrush> snowColor;
 	void DrawTextF(std::wstring text, float x, float y, float width, float height, ID2D1Brush* color);
-	Microsoft::WRL::ComPtr<ID3D11Device> d3dDevice;
-	Microsoft::WRL::ComPtr<ID3D11DeviceContext> d3dDeviceContext;
-	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> depthStencilState;
-	Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView;
-	Microsoft::WRL::ComPtr<ID3D11RasterizerState> rasterizerState;
+	ComPtr<ID3D11Device> d3dDevice;
+	ComPtr<ID3D11DeviceContext> d3dDeviceContext;
+	ComPtr<ID3D11DepthStencilState> depthStencilState;
+	ComPtr<IDXGISwapChain> swapChain;
+	ComPtr<ID3D11RenderTargetView> renderTargetView;
+	ComPtr<ID3D11RasterizerState> rasterizerState;
 	float renderTargetWidth, renderTargetHeight;
 protected:
-	Microsoft::WRL::ComPtr<IDXGIFactory1> dxgiFactory;
-	Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
-	Microsoft::WRL::ComPtr<IDXGIDevice> dxgiDevice;
-	Microsoft::WRL::ComPtr<ID2D1Factory1> factory;
-	Microsoft::WRL::ComPtr<IDWriteFactory5> dWriteFactory;
-	Microsoft::WRL::ComPtr<IDWriteTextFormat> textFormat;
-	Microsoft::WRL::ComPtr<IDWriteTextLayout> textLayout;
-	Microsoft::WRL::ComPtr<ID2D1RenderTarget> dxgiRenderTarget;
-	Microsoft::WRL::ComPtr<ID2D1HwndRenderTarget> renderTarget;
-	Microsoft::WRL::ComPtr<ID3D11Texture2D> renderTargetTexture;
-	Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+	ComPtr<IDXGIFactory1> dxgiFactory;
+	ComPtr<IDXGIAdapter1> adapter;
+	ComPtr<IDXGIDevice> dxgiDevice;
+	ComPtr<ID2D1Factory1> factory;
+	ComPtr<IDWriteFactory5> dWriteFactory;
+	ComPtr<IDWriteTextFormat> textFormat;
+	ComPtr<IDWriteTextLayout> textLayout;
+	ComPtr<ID2D1RenderTarget> dxgiRenderTarget;
+	ComPtr<ID2D1HwndRenderTarget> renderTarget;
+	ComPtr<ID3D11Texture2D> renderTargetTexture;
+	ComPtr<ID3D11Texture2D> backBuffer;
 };

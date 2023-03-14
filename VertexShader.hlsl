@@ -29,7 +29,7 @@ VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
     float4x4 worldViewProj = mul(world, mul(view, proj));
-    output.outPosition = mul(float4(input.inPos, 0.0f, 1.0f), worldViewProj);
+    output.outPosition = mul(float4(input.inPos.x * horizontalScale.x, input.inPos.y, 0.0f, 1.0f), worldViewProj);
     output.outPosition += float4(offset, 0.0f, 0.0f);
     output.outColor = input.inColor;
     output.outTexCoord = input.inTexCoord;

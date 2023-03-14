@@ -12,11 +12,11 @@ public:
 		creditsButton = spriteLoader->LoadSprite(L"MenuContent\\credits.png", 40, 13, this->creditsButton.Get());
 		credits = spriteLoader->LoadSprite(L"MenuContent\\credits_screen.png", 160, 90, this->credits.Get());
 		menuStates = main;
-		Vsync = new Button(gfx, hwnd, gfx->renderTargetWidth / 2 - 250, 200, 500, 20, nullptr, L"VSYNC: ");
-		Play = new Button(gfx, hwnd, horizontalPos(playButton.Get()), 320, 238, 91, playButton.Get(), L"");
-		Credits = new Button(gfx, hwnd, horizontalPos(creditsButton.Get()), 420, 280, 91, creditsButton.Get(), L"");
-		Settings = new Button(gfx, hwnd, horizontalPos(settingsButton.Get()), 520, 322, 91, settingsButton.Get(), L"");
-		Exit = new Button(gfx, hwnd, horizontalPos(exitButton.Get()), 620, 182, 91, exitButton.Get(), L"");
+		Vsync = new Button<bool>(gfx, hwnd, gfx->renderTargetWidth / 2 - 250, 200, 500, 20, nullptr, L"VSYNC: ");
+		Play = new Button<bool>(gfx, hwnd, horizontalPos(playButton.Get()), 320, 238, 91, playButton.Get(), L"");
+		Credits = new Button<bool>(gfx, hwnd, horizontalPos(creditsButton.Get()), 420, 280, 91, creditsButton.Get(), L"");
+		Settings = new Button<bool>(gfx, hwnd, horizontalPos(settingsButton.Get()), 520, 322, 91, settingsButton.Get(), L"");
+		Exit = new Button<bool>(gfx, hwnd, horizontalPos(exitButton.Get()), 620, 182, 91, exitButton.Get(), L"");
 	}
 	float horizontalPos(ID2D1Bitmap* bitmap) {
 		return (gfx->renderTargetWidth / 2 - 7 * bitmap->GetSize().width / 2);
@@ -87,6 +87,7 @@ public:
 		this->gfx->GetRenderTarget()->EndDraw();
 	}
 	bool bGameRunning;
+	Button<bool>* Vsync;
 private:
 	HWND hwnd;
 	enum MenuStates {
@@ -96,11 +97,10 @@ private:
 		creditsScreen,
 		play	
 	};
-	Button* Exit;
-	Button* Play;
-	Button* Settings;
-	Button* Credits;
-	Button* Vsync;
+	Button<bool>* Exit;
+	Button<bool>* Play;
+	Button<bool>* Settings;
+	Button<bool>* Credits;
 	MenuStates menuStates;
 	Microsoft::WRL::ComPtr<ID2D1Bitmap> background;
 	Microsoft::WRL::ComPtr<ID2D1Bitmap> exitButton;

@@ -31,7 +31,7 @@ void GameController::Update(HWND windowHandle, MSG msg) {
         if (duration.count() > 150) {
             for (int i = 0; i < enemies.size(); i++) {
                 enemies[i]->Update(character->x, character->y);
-                if (spriteLoader->CheckCollision(character.get(), enemies[i].get())) {
+                if (spriteLoader->CheckCollision(character.get(), enemies[i].get()) & 1) {
                     if (character->damageEnabled) {
                         if(character->isHitting)
                             enemies[i]->health -= 10;
@@ -76,47 +76,38 @@ void GameController::Render() {
         gfx->d3dDeviceContext->Map(gfx->constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
         Constants* constants = (Constants*)(mappedSubresource.pData);
         constants->pos = { character->x / gfx->width, character->y / gfx->height };
+        constants->horizontalScale = { (character->facingRight) ? -1.0f : 1.0f, 0, 0, 0};
         gfx->d3dDeviceContext->Unmap(gfx->constantBuffer.Get(), 0);
         D3D11_MAPPED_SUBRESOURCE subresource;
         gfx->d3dDeviceContext->Map(gfx->enemyConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
         Constants* enemyConstants = (Constants*)(subresource.pData);
         enemyConstants->pos = { enemies[0]->x / gfx->width, enemies[0]->y / gfx->height };
+        enemyConstants->horizontalScale = { (enemies[0]->facingRight) ? -1.0f : 1.0f, 
+            (enemies[0]->isDead) ? 1.0f : 0.0f, 0, 0 };
         gfx->d3dDeviceContext->Unmap(gfx->enemyConstantBuffer.Get(), 0);
-        const float clearColor[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
-        this->gfx->d3dDeviceContext->ClearRenderTargetView(this->gfx->renderTargetView.Get(),
-            clearColor);
-        //spriteLoader->spriteBatch->Begin(SpriteSortMode_BackToFront, nullptr, nullptr, this->gfx->depthStencilState.Get(), this->gfx->rasterizerState.Get(), nullptr, XMMatrixIdentity());
-        //spriteLoader->spriteBatch->End();
+        gfx->Clear(0.5f, 0.5f, 0.5f, 1.0f);
         character->Render();
-        this->gfx->d3dDeviceContext->OMSetDepthStencilState(this->gfx->depthStencilState.Get(), 1);
-        this->gfx->d3dDeviceContext->RSSetState(this->gfx->rasterizerState.Get());
-        this->gfx->d3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        this->gfx->d3dDeviceContext->VSSetShader(this->gfx->vertexShader.Get(), nullptr, 0);
-        this->gfx->d3dDeviceContext->PSSetShader(this->gfx->pixelShader.Get(), nullptr, 0);
+        gfx->Begin();
         this->gfx->d3dDeviceContext->VSSetConstantBuffers(0, 1, gfx->constantBuffer.GetAddressOf());
-        this->gfx->d3dDeviceContext->VSSetConstantBuffers(1, 1, gfx->projectionBuffer.GetAddressOf());
-        this->gfx->d3dDeviceContext->PSSetConstantBuffers(0, 1, gfx->constantBuffer.GetAddressOf());
-        this->gfx->d3dDeviceContext->IASetInputLayout(this->gfx->inputLayout.Get());
-        this->gfx->d3dDeviceContext->PSSetSamplers(0, 1, this->gfx->samplerState.GetAddressOf());
         this->gfx->d3dDeviceContext->IASetIndexBuffer(character->indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
         this->gfx->d3dDeviceContext->IASetVertexBuffers(0, 1, character->vertexBuffer.GetAddressOf(), &this->gfx->stride,
             &this->gfx->offset);
         this->gfx->d3dDeviceContext->PSSetShaderResources(0, 1, &character->currentFrame);
         this->gfx->d3dDeviceContext->DrawIndexed(6, 0, 0);
+        this->gfx->d3dDeviceContext->PSSetShader(this->gfx->pixelShader.Get(), nullptr, 0);
         for (int i = 0; i < enemies.size(); i++){
             if (!enemies[i]->isDead){
                 enemies[i].get()->Render();
                 this->gfx->d3dDeviceContext->PSSetConstantBuffers(0, 1, gfx->enemyConstantBuffer.GetAddressOf());
                 this->gfx->d3dDeviceContext->VSSetConstantBuffers(0, 1, gfx->enemyConstantBuffer.GetAddressOf());
-                this->gfx->d3dDeviceContext->VSSetConstantBuffers(1, 1, gfx->projectionBuffer.GetAddressOf());
-                this->gfx->d3dDeviceContext->IASetIndexBuffer(enemies[0]->indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-                this->gfx->d3dDeviceContext->IASetVertexBuffers(0, 1, enemies[0]->vertexBuffer.GetAddressOf(), &this->gfx->stride,
+                this->gfx->d3dDeviceContext->IASetIndexBuffer(enemies[i]->indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+                this->gfx->d3dDeviceContext->IASetVertexBuffers(0, 1, enemies[i]->vertexBuffer.GetAddressOf(), &this->gfx->stride,
                     &this->gfx->offset);
-                this->gfx->d3dDeviceContext->PSSetShaderResources(0, 1, &enemies[0]->currentFrame);
+                this->gfx->d3dDeviceContext->PSSetShaderResources(0, 1, &enemies[i]->currentFrame);
                 this->gfx->d3dDeviceContext->DrawIndexed(6, 0, 0);
             }
         }
-        this->gfx->swapChain->Present(1, NULL);
+        gfx->End();
         break;
     }
     }
