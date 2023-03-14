@@ -8,6 +8,6 @@ A game I'm currently working on.
 ![](ScreenShots/CreditsScreen.png)
 
 # In-game ScreenShots
-![](ScreenShots/CharacterIdle.png)
-![](ScreenShots/Dashing.png)
-![](ScreenShots/Attack.png)
+![](ScreenShots/CharacterIdleImage.png)
+![](ScreenShots/DashingImage.png)
+![](ScreenShots/AttackImage.png)
