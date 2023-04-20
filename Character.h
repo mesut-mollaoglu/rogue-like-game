@@ -1,20 +1,15 @@
 #pragma once
-#include <chrono>
-#include "Sprite.h"
+
+#include "StateMachine.h"
 
 class Character {
 public:
     Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> indexBuffer;
-    struct Vertex {
-        XMFLOAT2 pos;
-        XMFLOAT4 color;
-        XMFLOAT2 tex;
-    };
-    Character(const char* idleFrames, const char* walkingFrames, const char* hitFrames, const char* dashFrames, float nWidth, float nHeight, Sprite* sprite, HWND hwnd, Graphics* graphics)
-        : width(nWidth), height(nHeight), spriteLoader(sprite), windowHandle(hwnd), gfx(graphics) {
+    Character(const char* idleFrames, const char* walkingFrames, const char* hitFrames, const char* dashFrames, float nWidth, float nHeight, Sprite* spriteLoader, Graphics* graphics)
+        : width(nWidth), height(nHeight), gfx(graphics), sprite(spriteLoader) {
         float aspectRatio = (float)width / (float)height;
-        Vertex OurVertices[] =
+        Graphics::Vertex OurVertices[] =
         {
             XMFLOAT2(-0.650 * aspectRatio, -0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0, 1),
             XMFLOAT2(-0.650 * aspectRatio, 0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0, 0),
@@ -32,150 +27,106 @@ public:
         D3D11_SUBRESOURCE_DATA indexSubData = { indices, 0, 0 };
         this->gfx->d3dDevice.Get()->CreateBuffer(&indexBufferDesc, &indexSubData, this->indexBuffer.GetAddressOf());
         D3D11_BUFFER_DESC bd = { 0 };
-        bd.ByteWidth = sizeof(Vertex) * ARRAYSIZE(OurVertices);
+        bd.ByteWidth = sizeof(Graphics::Vertex) * ARRAYSIZE(OurVertices);
         bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         D3D11_SUBRESOURCE_DATA srd = { OurVertices, 0, 0 };
         this->gfx->d3dDevice->CreateBuffer(&bd, &srd, this->vertexBuffer.GetAddressOf());
-        this->idleFrames = spriteLoader->LoadFromDir(idleFrames, nWidth, nHeight);
-        this->walkingFrames = spriteLoader->LoadFromDir(walkingFrames, nWidth, nHeight);
-        this->hitFrames = spriteLoader->LoadFromDir(hitFrames, nWidth, nHeight);
-        this->dashFrames = spriteLoader->LoadFromDir(dashFrames, nWidth, nHeight);
-        dashState = Ready;
+        stateMachine.AddState(walking, new Animator(sprite->LoadFromDir(walkingFrames, nWidth, nHeight), 250), "Walking", {'W', 'A', 'S', 'D'});
+        stateMachine.AddState(idle, new Animator(sprite->LoadFromDir(idleFrames, nWidth, nHeight), 250), "Idle", {});
+        stateMachine.AddState(dash, new Animator(sprite->LoadFromDir(dashFrames, nWidth, nHeight), 50, true), "Dash", {VK_SHIFT}, 2500);
+        stateMachine.AddState(attack, new Animator(sprite->LoadFromDir(hitFrames, nWidth, nHeight), 125, true), "Attack", {VK_LBUTTON});
+        stateMachine.SetState("Idle");
     }
+    std::function<void()> walking = [&, this]() {
+        states = States::LoadDash;
+        if (StateMachine::isKeyPressed('A')) {
+            if (!stateMachine.equals("Dash") && !facingRight) { Flip(); }
+            position -= {speed, 0};
+        }
+        if (StateMachine::isKeyPressed('D')) {
+            if (!stateMachine.equals("Dash") && facingRight) { Flip(); }
+            position += {speed, 0};
+        }
+        if (StateMachine::isKeyPressed('W')) {
+            position += {0, speed};
+        }
+        if (StateMachine::isKeyPressed('S')) {
+            position -= {0, speed};
+        }
+    };
+    std::function<void()> dash = [&, this]() {
+        switch (states) {
+        case States::LoadDash: {
+            Math::float2 mousePos = StateMachine::ToScreenCoord(StateMachine::GetMousePos());
+            angle = Math::GetAngle(position, mousePos);
+            distance = position.GetDistance(mousePos);
+            distance = Math::smoothstep(0.0f, 3.0f, distance);
+            this->facingRight = (mousePos.x < position.x) ? true : false;
+            states = States::UpdateDash;
+        }
+        break;
+        case States::UpdateDash: {
+            position -= Math::toVector(angle) * distance * 100.0f;
+        }
+        break;
+        }
+    };
+    std::function<void()> idle = [&, this]() {
+        states = States::LoadDash; 
+    };
+    std::function<void()> attack = [&, this]() {
+        states = States::LoadDash; 
+    };
     void Update() {
-        if (!isHitting) {
-            isMoving = false;
-            if (GetAsyncKeyState((unsigned short)'A') & 0x8000) {
-                isMoving = true;
-                if (dashState != Dashing && !facingRight) { Flip(); }
-                x -= speed;
-            }
-            if (GetAsyncKeyState((unsigned short)'D') & 0x8000) {
-                isMoving = true;
-                if (dashState != Dashing && facingRight) { Flip(); }
-                x += speed;
-            }
-            if (GetAsyncKeyState((unsigned short)'W') & 0x8000) {
-                isMoving = true;
-                y += speed;
-            }
-            if (GetAsyncKeyState((unsigned short)'S') & 0x8000) {
-                isMoving = true;
-                y -= speed;
-            }
-            switch (dashState) {
-            case Ready:
-                dashFrame = 0;
-                if (GetAsyncKeyState(VK_SHIFT) & 0x8000) {
-                    GetCursorPos(&pt);
-                    ScreenToClient(gfx->windowHandle, &pt);
-                    float pos_x = 5 * gfx->width * (2.0f * pt.x / gfx->width - 1.0f);
-                    float pos_y = -5 * gfx->height * (2.0f * pt.y / gfx->height - 1.0f);
-                    angle = atan2(this->y - pos_y, this->x - pos_x);
-                    std::cout << pos_x << " " << this->x << std::endl;
-                    distance = sqrt(pow(this->x - pos_x, 2) + pow(this->y - pos_y, 2));
-                    distance = smoothstep(0.0f, 3.0f, distance);
-                    dashState = Dashing;
-                    this->facingRight = (pos_x < this->x) ? true : false;
-                }
-                break;
-            case Dashing: {
-                isMoving = false;
-                isHitting = false;
-                dt += 0.15;
-                this->x -= cos(angle) * distance * 100.0f;
-                this->y -= sin(angle) * distance * 100.0f;
-                if (dt >= 8.0) {
-                    dashState = CoolDown;
-                    dt += 6.0;
-                }
-                break;
-            }
-            case CoolDown:
-                dt -= 0.15;
-                if (dt <= 0) {
-                    dashState = Ready;
-                }
-                dashFrame = 0;
-                break;
-            }
+        Math::float3 distance = Graphics::GetEyeDistance();
+        if (StateMachine::mouseWheel == StateMachine::MouseWheel::WHEEL_UP) {
+            if (distance.z > 2.5f) Graphics::SetEyePosition(Math::float3(distance.xy(), distance.z - 0.1f));
         }
-        if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) && dashState != Dashing && hitEnabled) {
-            isHitting = true;
-            isMoving = false;
-            hitCooldownStart = std::chrono::high_resolution_clock::now();
-            hitEnabled = false;
+        else if (StateMachine::mouseWheel == StateMachine::MouseWheel::WHEEL_DOWN) {
+            if (distance.z < 7.5f) Graphics::SetEyePosition(Math::float3(distance.xy(), distance.z + 0.1f));
         }
-        damageEnabled = (this->dashState == this->Dashing) ? true : false;
-    }
-    void UpdateTimeless() {
-        if (!isHitting) {
-            auto now = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - hitCooldownStart).count();
-            if (duration > 500) {
-                hitEnabled = true;
-            }
-        }
-        frame++;
+        stateMachine.UpdateState();
     }
     void Render() {
-        if (isMoving && !isHitting) this->currentFrame = this->walkingFrames[(frame / 15) % 4];
-        else if (dashState != Dashing && !isHitting && !isMoving) this->currentFrame = this->idleFrames[(frame / 15) % 4];
-        else if (dashState == Dashing) {
-            if (dashFrame < 54) {
-                this->currentFrame = this->dashFrames[dashFrame / 6];
-                dashFrame++;
-            }
-        }
-        else if (isHitting && !isMoving) {
-            if (hitFrame < 32) {
-                this->currentFrame = this->hitFrames[hitFrame / 8];
-                hitFrame++;
-            }
-            else {
-                hitFrame = 0;
-                isHitting = false;
-                damageEnabled = true;
-            }
-        }
-        //if (this->currentFrame != nullptr) spriteLoader->DrawTexture(this->currentFrame, x, y, this->facingRight);
+        ID3D11ShaderResourceView* currentFrame = stateMachine.RenderState();
+        this->gfx->d3dDeviceContext->VSSetConstantBuffers(0, 1, gfx->constantBuffer.GetAddressOf());
+        this->gfx->d3dDeviceContext->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+        this->gfx->d3dDeviceContext->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &gfx->stride,
+            &gfx->offset);
+        this->gfx->d3dDeviceContext->PSSetShaderResources(0, 1, &currentFrame);
+        this->gfx->d3dDeviceContext->DrawIndexed(6, 0, 0);
     }
-    ID3D11ShaderResourceView* currentFrame;
-    float x = 100, y = 100;
+    Math::float2 GetPosition() {
+        return position;
+    }
+    float GetHealth() {
+        return health;
+    }
+    void SetHealth(float val) {
+        health = val;
+    }
+    void SetPosition(Math::float2 pos) {
+        this->position = pos;
+    }
     float width, height;
-    bool isHitting = false, damageEnabled = true;
-    float health = 1000.0f;
-    enum DashStates {
-        Ready,
-        Dashing,
-        CoolDown
+    enum class States {
+        LoadDash,
+        UpdateDash
     };
-    DashStates dashState;
-    POINT pt;
+    States states = States::LoadDash;
     bool facingRight = false;
+    StateMachine GetStateMachine() {
+        return stateMachine;
+    }
 private:
-    double dt = 0;
-    float distance, angle;
-    float smoothstep(float edge0, float edge1, float x) {
-        x = clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
-        return x * x * (3.0f - 2.0f * x);
-    };
-    float clamp(float x, float min, float max) {
-        return fmin(fmax(x, min), max);
-    };
-    HWND windowHandle;
+    Math::float2 position = { -2000, 100 };
+    float health = 100.0f;
+    float distance = 0.0f, angle = 0.0f;
     void Flip() {
         facingRight = !facingRight;
     }
     float speed = 10.0f;
-    std::vector<ID3D11ShaderResourceView*> hitFrames;
-    std::vector<ID3D11ShaderResourceView*> dashFrames;
-    std::vector<ID3D11ShaderResourceView*> walkingFrames;
-    std::vector<ID3D11ShaderResourceView*> idleFrames;
-    int frame = 0, hitFrame = 0, dashFrame = 0;
-    Sprite* spriteLoader;
+    StateMachine stateMachine;
     Graphics* gfx;
-    bool isMoving = false;
-    std::chrono::time_point<std::chrono::high_resolution_clock> hitCooldownStart;
-    bool hitEnabled = true;
+    Sprite* sprite;
 };

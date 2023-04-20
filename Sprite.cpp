@@ -8,7 +8,7 @@ ID3D11ShaderResourceView* Sprite::LoadTexture(
 	UINT destinationHeight)
 {
 	CoInitializeEx(NULL, COINIT_MULTITHREADED);
-	this->factory = NULL;
+	factory = NULL;
 	IWICBitmapDecoder* pDecoder = NULL;
 	IWICBitmapFrameDecode* pSource = NULL;
 	IWICStream* pStream = NULL;
@@ -23,7 +23,7 @@ ID3D11ShaderResourceView* Sprite::LoadTexture(
 		(LPVOID*)&factory);
 
 	if (SUCCEEDED(hr)) {
-		hr = this->factory->CreateDecoderFromFilename(
+		hr = factory->CreateDecoderFromFilename(
 			uri,
 			NULL,
 			GENERIC_READ,
@@ -35,7 +35,7 @@ ID3D11ShaderResourceView* Sprite::LoadTexture(
 		hr = pDecoder->GetFrame(0, &pSource);
 	}
 	if (SUCCEEDED(hr)) {
-		hr = this->factory->CreateFormatConverter(&pConverter);
+		hr = factory->CreateFormatConverter(&pConverter);
 	}
 	if (SUCCEEDED(hr)) {
 		hr = pConverter->Initialize(
@@ -49,7 +49,7 @@ ID3D11ShaderResourceView* Sprite::LoadTexture(
 	}
 	if (destinationWidth && destinationHeight) {
 		if (SUCCEEDED(hr)) {
-			hr = this->factory->CreateBitmapScaler(&pScaler);
+			hr = factory->CreateBitmapScaler(&pScaler);
 		}
 
 		if (SUCCEEDED(hr)) {
@@ -92,13 +92,13 @@ ID3D11ShaderResourceView* Sprite::LoadTexture(
 	data.pSysMem = buffer.data();
 	data.SysMemPitch = destinationWidth * 4;
 	ID3D11Texture2D* texture;
-	hr = this->gfx->d3dDevice->CreateTexture2D(&textureDesc, &data, &texture);
+	hr = gfx->d3dDevice->CreateTexture2D(&textureDesc, &data, &texture);
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = textureDesc.Format;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
 	ID3D11ShaderResourceView* srv;
-	this->gfx->d3dDevice->CreateShaderResourceView(texture, &srvDesc, &srv);
+	gfx->d3dDevice->CreateShaderResourceView(texture, &srvDesc, &srv);
 	return srv;
 	srv->Release();
 	texture->Release();
@@ -114,7 +114,7 @@ ID2D1Bitmap* Sprite::LoadSprite(
 	UINT destinationHeight,
 	ID2D1Bitmap* ppBitmap)
 {
-	this->factory = NULL;
+	factory = NULL;
 	IWICBitmapDecoder* pDecoder = NULL;
 	IWICBitmapFrameDecode* pSource = NULL;
 	IWICStream* pStream = NULL;
@@ -129,7 +129,7 @@ ID2D1Bitmap* Sprite::LoadSprite(
 		(LPVOID*)&factory);
 
 	if (SUCCEEDED(hr)) {
-		hr = this->factory->CreateDecoderFromFilename(
+		hr = factory->CreateDecoderFromFilename(
 			uri,
 			NULL,
 			GENERIC_READ,
@@ -142,7 +142,7 @@ ID2D1Bitmap* Sprite::LoadSprite(
 		hr = pDecoder->GetFrame(0, &pSource);
 	}
 	if (SUCCEEDED(hr)) {
-		hr = this->factory->CreateFormatConverter(&pConverter);
+		hr = factory->CreateFormatConverter(&pConverter);
 	}
 
 	if (SUCCEEDED(hr)) {
@@ -157,7 +157,7 @@ ID2D1Bitmap* Sprite::LoadSprite(
 	}
 	if (destinationWidth && destinationHeight) {
 		if (SUCCEEDED(hr)) {
-			hr = this->factory->CreateBitmapScaler(&pScaler);
+			hr = factory->CreateBitmapScaler(&pScaler);
 		}
 
 		if (SUCCEEDED(hr)) {
@@ -187,47 +187,6 @@ ID2D1Bitmap* Sprite::LoadSprite(
 	ppBitmap = NULL;
 }
 
-void Sprite::Draw(ID2D1Bitmap* bitmap, int index, float x, float y, int spriteWidth, int spriteHeight, bool flip) {
-	int spritesAcross = (bitmap->GetSize().width / spriteWidth);
-	D2D1_RECT_F src = D2D1::RectF(
-		(float)((index % spritesAcross) * spriteWidth),
-		(float)((index / spritesAcross) * spriteHeight),
-		(float)(((index % spritesAcross) * spriteWidth) + spriteWidth),
-		(float)(((index / spritesAcross) * spriteHeight) + spriteHeight)
-	);
-	D2D1_RECT_F dest = D2D1::RectF(
-		x, y,
-		x + spriteWidth,
-		y + spriteHeight
-	);
-	if (flip) {
-		D2D1::Matrix3x2F flip = D2D1::Matrix3x2F::Scale(-1.0f, 1.0f, D2D1::Point2F(x + spriteWidth / 2, y + spriteHeight / 2));
-		dest.left = x + spriteWidth;
-		dest.right = x;
-		D2D1_LAYER_PARAMETERS params;
-		params.contentBounds = dest;
-		params.geometricMask = NULL;
-		params.maskAntialiasMode = D2D1_ANTIALIAS_MODE_PER_PRIMITIVE;
-		params.maskTransform = flip;
-		params.opacity = 1.0f;
-		params.opacityBrush = NULL;
-		params.layerOptions = D2D1_LAYER_OPTIONS_NONE;
-		this->gfx->GetRenderTarget()->PushLayer(params, NULL);
-		this->gfx->GetRenderTarget()->SetTransform(flip);
-	}
-	this->gfx->GetRenderTarget()->DrawBitmap(
-		bitmap,
-		dest,
-		1.0f,
-		D2D1_BITMAP_INTERPOLATION_MODE::D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
-		src
-	);
-	if (flip) {
-		this->gfx->GetRenderTarget()->PopLayer();
-		this->gfx->GetRenderTarget()->SetTransform(D2D1::IdentityMatrix());
-	}
-}
-
 std::vector<ID3D11ShaderResourceView*> Sprite::LoadFromDir(std::string pathName,
 	UINT destinationWidth,
 	UINT destinationHeight)
@@ -241,7 +200,7 @@ std::vector<ID3D11ShaderResourceView*> Sprite::LoadFromDir(std::string pathName,
 		do {
 			if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
 				ID3D11ShaderResourceView* image;
-				image = this->LoadTexture((std::wstring(pathName.begin(), pathName.end()) + L"\\" + fd.cFileName).c_str(),
+				image = LoadTexture((std::wstring(pathName.begin(), pathName.end()) + L"\\" + fd.cFileName).c_str(),
 					destinationWidth, destinationHeight);
 				images.push_back(image);
 			}
@@ -251,42 +210,9 @@ std::vector<ID3D11ShaderResourceView*> Sprite::LoadFromDir(std::string pathName,
 	return images;
 }
 
-void Sprite::DrawTexture(ID3D11ShaderResourceView* image, float x, float y, bool flip) {
-	ID3D11Texture2D* pTextureInterface = 0;
-	ID3D11Resource* res;
-	image->GetResource(&res);
-	res->QueryInterface<ID3D11Texture2D>(&pTextureInterface);
-	D3D11_TEXTURE2D_DESC desc;
-	pTextureInterface->GetDesc(&desc);
-	int spriteWidth = desc.Width;
-	int spriteHeight = desc.Height;
-	pTextureInterface->Release();
-	res->Release();
-	D3D11_RECT dest = {
-	x, y,
-	x + spriteWidth,
-	y + spriteHeight
-	};
-	D3D11_RECT src = {
-		0, 0,
-		spriteWidth,
-		spriteHeight
-	};
-	float depth = float((600 - y) / 600);
-	if (!flip)
-		this->spriteBatch->Draw(image, dest, &src, DirectX::Colors::White, 0.0f,
-			DirectX::XMFLOAT2(spriteWidth / 2, spriteHeight / 2),
-			DirectX::DX11::SpriteEffects::SpriteEffects_None, depth);
-	else
-		this->spriteBatch->Draw(image, dest, &src, DirectX::Colors::White, 0.0f,
-			DirectX::XMFLOAT2(spriteWidth / 2, spriteHeight / 2),
-			DirectX::DX11::SpriteEffects::SpriteEffects_FlipHorizontally, depth);
-}
-
 uint8_t Sprite::CheckCollision(Character* character, Enemy* enemy) {
-	float dx = character->x - enemy->x;
-	float dy = character->y - enemy->y;
 	float radius = (character->width + enemy->width) * 3;
-	if ((radius * radius) > (dx * dx + dy * dy)) return 1;
+	Math::float2 vec = character->GetPosition() - enemy->GetPosition();
+	if ((radius * radius) > (vec.GetLengthSq())) return 1;
 	return 0;
 }

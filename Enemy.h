@@ -1,4 +1,5 @@
 #pragma once
+#include "StateMachine.h"
 #include "Sprite.h"
 
 using namespace DirectX;
@@ -12,8 +13,8 @@ public:
 		XMFLOAT4 color;
 		XMFLOAT2 tex;
 	};
-	Enemy(const char* attackDir, const char* moveDir, const char* idleDir, const char* deadDir, int nWidth, int nHeight, float posX, float posY, Sprite* sprite, Graphics* graphics) : spriteLoader(sprite),
-		width(nWidth), height(nHeight), x(posX), y(posY), gfx(graphics) {
+	Enemy(const char* attackDir, const char* moveDir, const char* idleDir, const char* deadDir, int nWidth, int nHeight, Sprite* sprite, Graphics* graphics) : spriteLoader(sprite),
+		width(nWidth), height(nHeight), gfx(graphics) {
 		float aspectRatio = (float)width / (float)height;
 		Vertex OurVertices[] =
 		{
@@ -44,6 +45,13 @@ public:
 		this->isSpawning = true;
 		states = Spawn;
 	}
+	std::function<void()> Follow = [&, this]() {
+		Math::float2 direction = characterPosition - position;
+		direction.Normalize();
+		float t = elapsedTime * speed;
+		t = smoothstep(0.0f, 20.0f, t);
+		position += direction * t * 10.0f;
+	};
 	void Render() {
 		if (this->moving) this->currentFrame = this->enemyMoving[(this->frame / 24) % 2];
 		if (this->attacking) {
@@ -70,7 +78,7 @@ public:
 			if (this->deadFrame == 90) isDead = true;
 		}
 	}
-	void Update(float character_x, float character_y) {
+	void Update(Math::float2 pos) {
 		
 		if (isDead) {
 			enemyAttack.clear();
@@ -81,33 +89,25 @@ public:
 		}
 		this->elapsedTime += 0.01f;
 		if (!attacking) {
-			this->y += this->smoothSin(this->elapsedTime, 1.5f, 6.0f);
+			position.y += this->smoothSin(this->elapsedTime, 1.5f, 6.0f);
 			m_time += m_deltaTime;
 		}
-		this->FollowTarget(character_x, character_y, this->elapsedTime);
-		this->facingRight = (this->x > character_x) ? true : false;
+		this->FollowTarget(pos, this->elapsedTime);
+		this->facingRight = (position.x > pos.x) ? true : false;
 		frame++;		
 	}
 
-	void FollowTarget(float character_x, float character_y, float elapsedTime) {
-		DirectX::XMFLOAT2 playerPos = DirectX::XMFLOAT2(character_x, character_y);
-		DirectX::XMFLOAT2 enemyPos = DirectX::XMFLOAT2(this->x, this->y);
-		DirectX::XMVECTOR delta = DirectX::XMVectorSubtract(DirectX::XMLoadFloat2(&playerPos),
-			DirectX::XMLoadFloat2(&enemyPos));
-		float distance_x = XMVectorGetX(XMVector2Length(delta));
-		float distance_y = XMVectorGetY(XMVector2Length(delta));
-		float distance = sqrt(distance_x * distance_x + distance_y * distance_y);
+	void FollowTarget(Math::float2 pos, float elapsedTime) {
+		float distance = pos.GetDistance(position);
 		if (abs(distance) < 7000.0f && abs(distance) > 550.0f && !this->attacking) {
 			this->moving = true;
 			this->attacking = false;
 			this->idle = false;
-			DirectX::XMVECTOR direction = DirectX::XMVectorSubtract(DirectX::XMLoadFloat2(&playerPos),
-				DirectX::XMLoadFloat2(&enemyPos));
-			direction = DirectX::XMVector2Normalize(direction);
+			Math::float2 direction = pos - position;
+			direction.Normalize();
 			float t = elapsedTime * speed;
 			t = smoothstep(0.0f, 20.0f, t);
-			this->x += direction.m128_f32[0] * t * 10.0f;
-			this->y += direction.m128_f32[1] * t * 10.0f;
+			position += direction * t * 10.0f;
 		}
 		else if (abs(distance) > 7000.0f) {
 			this->moving = false;
@@ -120,7 +120,6 @@ public:
 			this->idle = false;
 		}
 	}
-	float x, y;
 	ID3D11ShaderResourceView* currentFrame;
 	float health = 20.0f;
 	bool attacking;
@@ -136,8 +135,13 @@ public:
 		Following,
 		Dead
 	};
+	Math::float2 GetPosition() {
+		return position;
+	}
 	EnemyStates states;
 private:
+	Math::float2 characterPosition;
+	Math::float2 position = {2000, -100};
 	Graphics* gfx;
 	std::vector<ID3D11ShaderResourceView*> enemyAttack;
 	std::vector<ID3D11ShaderResourceView*> enemyMoving;

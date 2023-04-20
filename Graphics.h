@@ -13,14 +13,55 @@
 #include <fstream>
 #include <vector>
 #include <utility>
+#include "Math.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
+namespace Structures {
+	typedef struct Window {
+		static HWND windowHandle;
+		static int GetWidth() {
+			RECT rc;
+			GetClientRect(GetActiveWindow(), &rc);
+			return static_cast<int>(rc.right - rc.left);
+		}
+		static int GetHeight() {
+			RECT rc;
+			GetClientRect(GetActiveWindow(), &rc);
+			return static_cast<int>(rc.bottom - rc.top);
+		}
+	}Window;
+	typedef struct Camera {
+		static Math::float3 Position;
+		static XMMATRIX projMatrix, viewMatrix, worldMatrix;
+		static XMVECTOR eyePos;
+		static XMVECTOR lookAtPos;
+		static XMVECTOR upVector;
+	}Camera;
+};
+
 class Graphics {
 public:
-	XMMATRIX projMatrix, viewMatrix, worldMatrix;
-	int width, height;
+	static inline Math::float3 GetEyeDistance() {
+		return Structures::Camera::Position;
+	}
+	static void SetEyePosition(Math::float3 vec) {
+		Structures::Camera::Position = vec;
+		Structures::Camera::worldMatrix = XMMatrixIdentity();
+		Structures::Camera::eyePos = XMVectorSet(Structures::Camera::Position.x, Structures::Camera::Position.y,
+			-Structures::Camera::Position.z, 0.0f);
+		Structures::Camera::lookAtPos = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+		Structures::Camera::upVector = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		Structures::Camera::viewMatrix = XMMatrixLookAtLH(Structures::Camera::eyePos, 
+			Structures::Camera::lookAtPos, Structures::Camera::upVector);
+		float fovDegrees = 90.0f;
+		float fovRadians = (fovDegrees / 360.0f) * XM_2PI;
+		float aspectRatio = (float)Structures::Window::GetWidth() / (float)Structures::Window::GetHeight();
+		float nearZ = 0.1f;
+		float farZ = 100.0f;
+		Structures::Camera::projMatrix = XMMatrixPerspectiveFovLH(fovRadians, aspectRatio, nearZ, farZ);
+	}
 	bool InitGraphics(HWND hwnd);
 	Graphics();
 	~Graphics();
@@ -33,29 +74,29 @@ public:
 	IDWriteFactory5* getWriteFactory() {
 		return dWriteFactory.Get();
 	}
-	struct Vertex {
+	typedef struct Vertex {
 		XMFLOAT2 pos;
 		XMFLOAT4 color;
 		XMFLOAT2 tex;
-	};
-	struct Constants
+	}Vertex;
+	typedef struct Constants
 	{
 		XMFLOAT2 pos;
 		XMFLOAT2 paddingUnused;
 		XMFLOAT4 horizontalScale;
-	};
-	struct CollisionConstants
+	}Constants;
+	typedef struct CollisionConstants
 	{
 		XMFLOAT2 pos;
 		XMFLOAT2 paddingUnused;
 		XMFLOAT4 collisionValues;
-	};
-	struct ProjectionBuffer
+	}CollisionConstants;
+	typedef struct ProjectionBuffer
 	{
 		XMMATRIX proj;
 		XMMATRIX world;
 		XMMATRIX view;
-	};
+	}ProjBuffer;
 	void Clear(float r, float g, float b, float a);
 	void Begin();
 	void End();
@@ -63,7 +104,7 @@ public:
 	UINT stride, offset;
 	HWND windowHandle;
 	ComPtr<ID3D11InputLayout> inputLayout;
-	ComPtr<ID3D11Buffer> projectionBuffer;
+	ComPtr<ID3D11Buffer> projectionBuffer;	
 	ComPtr<ID3D11Buffer> enemyConstantBuffer;
 	ComPtr<ID3D11Buffer> constantBuffer;
 	ComPtr<ID3D11SamplerState> samplerState;

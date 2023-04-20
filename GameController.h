@@ -12,18 +12,6 @@ protected:
 	Graphics* gfx;
 	Sprite* spriteLoader;
 public:
-	struct Constants
-	{
-		XMFLOAT2 pos;
-		XMFLOAT2 paddingUnused;
-		XMFLOAT4 horizontalScale;
-	};
-	struct ProjectionBuffer
-	{
-		XMMATRIX proj;
-		XMMATRIX world;
-		XMMATRIX view;
-	};
 	enum State {
 		mainMenu,
 		gameRunning

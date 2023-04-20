@@ -1,5 +1,14 @@
 #include "Graphics.h"
 
+Math::float3 Structures::Camera::Position;
+XMVECTOR Structures::Camera::eyePos;
+XMVECTOR Structures::Camera::lookAtPos;
+XMVECTOR Structures::Camera::upVector;
+XMMATRIX Structures::Camera::projMatrix;
+XMMATRIX Structures::Camera::viewMatrix;
+XMMATRIX Structures::Camera::worldMatrix;
+HWND Structures::Window::windowHandle;
+
 Graphics::Graphics() {
 
 }
@@ -44,28 +53,30 @@ HRESULT Graphics::InitWritingFactory() {
 		__uuidof(IDWriteFactory5),
 		reinterpret_cast<IUnknown**>(dWriteFactory.GetAddressOf()));
 	if (SUCCEEDED(hr)) {
-		hr = this->dWriteFactory->CreateTextFormat(L"scientifica", NULL, DWRITE_FONT_WEIGHT_REGULAR,
+		hr = dWriteFactory->CreateTextFormat(L"scientifica", NULL, DWRITE_FONT_WEIGHT_REGULAR,
 			DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 60.0f, L"en-us", &textFormat);
 	}
-	if (SUCCEEDED(hr)) { hr = this->textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); }
-	if (SUCCEEDED(hr)) { this->textFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); }
+	if (SUCCEEDED(hr)) { hr = textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER); }
+	if (SUCCEEDED(hr)) { textFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER); }
 	return hr;
 }
 
 void Graphics::DrawTextF(std::wstring text, float x, float y, float width, float height, ID2D1Brush* color) {
 	HRESULT hr;
-	if (SUCCEEDED(this->InitWritingFactory())) {
-		hr = this->dWriteFactory->CreateTextLayout(text.c_str(), (UINT)wcslen(text.c_str()), this->textFormat.Get(),
+	if (SUCCEEDED(InitWritingFactory())) {
+		hr = dWriteFactory->CreateTextLayout(text.c_str(), (UINT)wcslen(text.c_str()), textFormat.Get(),
 			width, height, textLayout.GetAddressOf());
 	}
 	if (SUCCEEDED(hr)) {
-		this->renderTarget->DrawTextLayout(D2D1::Point2F(x, y), textLayout.Get(), color, D2D1_DRAW_TEXT_OPTIONS_NONE);
+		renderTarget->DrawTextLayout(D2D1::Point2F(x, y), textLayout.Get(), color, D2D1_DRAW_TEXT_OPTIONS_NONE);
 	}
-	this->textLayout.Get()->Release();
+	textLayout.Get()->Release();
 }
 
 bool Graphics::InitGraphics(HWND hwnd) {
-	this->windowHandle = hwnd;
+	Structures::Window::windowHandle = hwnd;
+	int width = Structures::Window::GetWidth();
+	int height = Structures::Window::GetHeight();
 	//Direct3D initialization
 	{
 	D3D11_TEXTURE2D_DESC textureDesc;
@@ -84,7 +95,6 @@ bool Graphics::InitGraphics(HWND hwnd) {
 	GetClientRect(hwnd, &rect);
 	width = rect.right - rect.left;
 	height = rect.bottom - rect.top;
-	std::cout << width << " " << height << std::endl;
 	DXGI_SWAP_CHAIN_DESC swapChainDesc;
 	ZeroMemory(&swapChainDesc, sizeof(DXGI_SWAP_CHAIN_DESC));
 	swapChainDesc.BufferCount = 1;
@@ -180,8 +190,8 @@ bool Graphics::InitGraphics(HWND hwnd) {
 		D2D1::RenderTargetProperties(),
 		D2D1::HwndRenderTargetProperties(hwnd, D2D1::SizeU(width, height)),
 		renderTarget.GetAddressOf());
-	this->renderTarget->SetDpi(ceil(this->renderTarget->GetSize().width * dpi / (float)this->width),
-		this->renderTarget->GetSize().height * dpi / (float)this->height);
+	this->renderTarget->SetDpi(ceil(this->renderTarget->GetSize().width * dpi / (float)width),
+		this->renderTarget->GetSize().height * dpi / (float)height);
 	renderTargetWidth = this->renderTarget->GetSize().width;
 	renderTargetHeight = this->renderTarget->GetSize().height;
 	if (hr != S_OK) return false;
@@ -266,16 +276,6 @@ bool Graphics::InitGraphics(HWND hwnd) {
 		HRESULT hResult = d3dDevice->CreateBuffer(&bufferDesc, nullptr, enemyConstantBuffer.GetAddressOf());
 		assert(SUCCEEDED(hResult));
 	}
-	worldMatrix = XMMatrixIdentity();
-	static XMVECTOR eyePos = XMVectorSet(0.0f, 0.0f, -5.0f, 0.0f);
-	static XMVECTOR lookAtPos = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
-	static XMVECTOR upVector = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	viewMatrix = XMMatrixLookAtLH(eyePos, lookAtPos, upVector);
-	float fovDegrees = 90.0f;
-	float fovRadians = (fovDegrees / 360.0f) * XM_2PI;
-	float aspectRatio = (float)this->width / (float)this->height;
-	float nearZ = 0.1f;
-	float farZ = 100.0f;
-	projMatrix = XMMatrixPerspectiveFovLH(fovRadians, aspectRatio, nearZ, farZ);
+	Graphics::SetEyePosition(Math::float3(0.0f, 0.0f, 5.0f));
 	return true;
 }

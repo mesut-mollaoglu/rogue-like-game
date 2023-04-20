@@ -9,7 +9,10 @@ Graphics* graphics;
 Sprite* spriteLoader;
 HWND windowHandle = nullptr;
 
+StateMachine::MouseWheel StateMachine::mouseWheel;
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+	if (message == WM_MOUSEWHEEL) { StateMachine::mouseWheel = StateMachine::GetMouseWheel(wParam); }
 	if (message == WM_DESTROY) { PostQuitMessage(0); controller->Unload(); return 0; }
 	DefWindowProc(hwnd, message, wParam, lParam);
 }
