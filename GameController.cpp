@@ -74,7 +74,7 @@ void GameController::Render() {
         gfx->d3dDeviceContext->Map(gfx->constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
         Graphics::Constants* constants = (Graphics::Constants*)(mappedSubresource.pData);
         constants->pos = { character->GetPosition().x / Structures::Window::GetWidth(), character->GetPosition().y / Structures::Window::GetHeight() };
-        constants->horizontalScale = { (character->facingRight) ? -1.0f : 1.0f, 0, 0, 0};
+        constants->horizontalScale = { (character->facingRight) ? -1.0f : 1.0f, 0, 0, 0 };
         gfx->d3dDeviceContext->Unmap(gfx->constantBuffer.Get(), 0);
         D3D11_MAPPED_SUBRESOURCE subresource;
         gfx->d3dDeviceContext->Map(gfx->enemyConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);

@@ -17,7 +17,7 @@ float2 GetTexCoord(float2 texcoord, float4 nHorizontalScale, float2 nOffset, flo
 float4 GetSample(float2 texcoord, Texture2D texName) {
     float4 val = texName.Sample(samplerState, texcoord);
     clip(round(val.a) == 0 ? -1 : 1);
-    return val;     
+    return val;
 }
 
 float4 main(float2 mainTexCoord : TEXCOORD0) : SV_TARGET0{

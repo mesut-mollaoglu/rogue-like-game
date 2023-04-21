@@ -43,6 +43,18 @@ public:
             ret.y = y * k;
             return ret;
         }
+        float2 operator+(float2 vec) {
+            float2 ret;
+            ret.x = x + vec.x;
+            ret.y = y + vec.y;
+            return ret;
+        }
+        float2 operator-(float2 vec) {
+            float2 ret;
+            ret.x = x - vec.x;
+            ret.y = y - vec.y;
+            return ret;
+        }
         float GetLength() {
             return Math::sqrt(x * x + y * y);
         }
@@ -54,12 +66,6 @@ public:
         }
         float GetDot(float2 vec) {
             return x * vec.x + y * vec.y;
-        }
-        float2 operator-(float2 vec) {
-            float2 ret;
-            ret.x = x - vec.x;
-            ret.y = y - vec.y;
-            return ret;
         }
         void Normalize() {
             x /= GetLength();

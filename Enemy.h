@@ -45,13 +45,6 @@ public:
 		this->isSpawning = true;
 		states = Spawn;
 	}
-	std::function<void()> Follow = [&, this]() {
-		Math::float2 direction = characterPosition - position;
-		direction.Normalize();
-		float t = elapsedTime * speed;
-		t = smoothstep(0.0f, 20.0f, t);
-		position += direction * t * 10.0f;
-	};
 	void Render() {
 		if (this->moving) this->currentFrame = this->enemyMoving[(this->frame / 24) % 2];
 		if (this->attacking) {
@@ -103,11 +96,10 @@ public:
 			this->moving = true;
 			this->attacking = false;
 			this->idle = false;
-			Math::float2 direction = pos - position;
-			direction.Normalize();
+			float angle = Math::GetAngle(position, pos);
 			float t = elapsedTime * speed;
 			t = smoothstep(0.0f, 20.0f, t);
-			position += direction * t * 10.0f;
+			position -= Math::toVector(angle) * t * 10.0f;
 		}
 		else if (abs(distance) > 7000.0f) {
 			this->moving = false;

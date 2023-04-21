@@ -9,10 +9,9 @@ Graphics* graphics;
 Sprite* spriteLoader;
 HWND windowHandle = nullptr;
 
-StateMachine::MouseWheel StateMachine::mouseWheel;
+MSG Structures::Window::message = { 0 };
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
-	if (message == WM_MOUSEWHEEL) { StateMachine::mouseWheel = StateMachine::GetMouseWheel(wParam); }
 	if (message == WM_DESTROY) { PostQuitMessage(0); controller->Unload(); return 0; }
 	DefWindowProc(hwnd, message, wParam, lParam);
 }
@@ -45,16 +44,15 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	spriteLoader->Init(graphics);
 	ShowWindow(windowHandle, nCmdShow);
 	controller->Load(spriteLoader, windowHandle);
-	MSG message = { 0 };
-	message.message = WM_NULL;
-	while (message.message != WM_QUIT) {
-		if (PeekMessage(&message, NULL, 0, 0, PM_REMOVE)) {
-			TranslateMessage(&message);
-			DispatchMessage(&message);
+	Structures::Window::message.message = WM_NULL;
+	while (Structures::Window::message.message != WM_QUIT) {
+		if (PeekMessage(&Structures::Window::message, NULL, 0, 0, PM_REMOVE)) {
+			TranslateMessage(&Structures::Window::message);
+			DispatchMessage(&Structures::Window::message);
 		}
 		else {
 			controller->Render();
-			controller->Update(windowHandle, message);
+			controller->Update(windowHandle, Structures::Window::message);
 		}
 	}
 	return 0;

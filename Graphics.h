@@ -31,6 +31,7 @@ namespace Structures {
 			GetClientRect(GetActiveWindow(), &rc);
 			return static_cast<int>(rc.bottom - rc.top);
 		}
+		static MSG message;
 	}Window;
 	typedef struct Camera {
 		static Math::float3 Position;
@@ -38,6 +39,14 @@ namespace Structures {
 		static XMVECTOR eyePos;
 		static XMVECTOR lookAtPos;
 		static XMVECTOR upVector;
+		static float fovDegrees;
+		static float fovRadians;
+		static float aspectRatio;
+		static float nearZ;
+		static float farZ;
+		static XMVECTOR defaultUp;
+		static XMVECTOR defaultForward;
+		static XMMATRIX rotationDefault;
 	}Camera;
 };
 
@@ -47,20 +56,24 @@ public:
 		return Structures::Camera::Position;
 	}
 	static void SetEyePosition(Math::float3 vec) {
-		Structures::Camera::Position = vec;
-		Structures::Camera::worldMatrix = XMMatrixIdentity();
-		Structures::Camera::eyePos = XMVectorSet(Structures::Camera::Position.x, Structures::Camera::Position.y,
-			-Structures::Camera::Position.z, 0.0f);
-		Structures::Camera::lookAtPos = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
-		Structures::Camera::upVector = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		Structures::Camera::viewMatrix = XMMatrixLookAtLH(Structures::Camera::eyePos, 
-			Structures::Camera::lookAtPos, Structures::Camera::upVector);
-		float fovDegrees = 90.0f;
-		float fovRadians = (fovDegrees / 360.0f) * XM_2PI;
-		float aspectRatio = (float)Structures::Window::GetWidth() / (float)Structures::Window::GetHeight();
-		float nearZ = 0.1f;
-		float farZ = 100.0f;
-		Structures::Camera::projMatrix = XMMatrixPerspectiveFovLH(fovRadians, aspectRatio, nearZ, farZ);
+		using Structures::Camera;
+		Camera::defaultUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		Camera::defaultForward = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+		Camera::rotationDefault = XMMatrixRotationRollPitchYaw(0.0f, 0.0f, 0.0f);
+		Camera::Position = vec;
+		Camera::worldMatrix = XMMatrixIdentity();
+		Camera::eyePos = XMVectorSet(0.0f, 0.0f, -Camera::Position.z, 0.0f);
+		Camera::lookAtPos = XMVector3TransformCoord(Camera::defaultForward, Camera::rotationDefault);
+		Camera::lookAtPos += Camera::eyePos;
+		Camera::upVector = XMVector3TransformCoord(Camera::defaultUp, Camera::rotationDefault);
+		Camera::viewMatrix = XMMatrixLookAtLH(Camera::eyePos, Camera::lookAtPos, Camera::upVector);
+		Camera::fovDegrees = 90.0f;
+		Camera::fovRadians = (Camera::fovDegrees / 360.0f) * XM_2PI;
+		Camera::aspectRatio = (float)Structures::Window::GetWidth() / (float)Structures::Window::GetHeight();
+		Camera::nearZ = 0.1f;
+		Camera::farZ = 100.0f; 
+		Camera::projMatrix = XMMatrixPerspectiveFovLH(Camera::fovRadians, Camera::aspectRatio, Camera::nearZ,
+			Camera::farZ);
 	}
 	bool InitGraphics(HWND hwnd);
 	Graphics();
@@ -82,7 +95,7 @@ public:
 	typedef struct Constants
 	{
 		XMFLOAT2 pos;
-		XMFLOAT2 paddingUnused;
+		XMFLOAT2 cameraPos;
 		XMFLOAT4 horizontalScale;
 	}Constants;
 	typedef struct CollisionConstants

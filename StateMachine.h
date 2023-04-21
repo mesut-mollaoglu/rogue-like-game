@@ -5,6 +5,25 @@
 
 class StateMachine {
 public:
+	const static int maxKeyCombs = 3;
+	typedef struct Key {
+		std::vector<char> keys;
+		Key() = default;
+		Key(char c) {
+			Add(c);
+		}
+		void Add(char c) {
+			keys.push_back(c);
+		}
+		template<class... Args>
+		void KeyComb(char c, Args... args) {
+			Add(c);
+			Add(args...);
+		}
+		bool isPressed() {
+			return StateMachine::isKeyPressed(*keys.data());
+		}
+	}Key;
 	static enum class MouseWheel {
 		WHEEL_UP,
 		WHEEL_DOWN,
@@ -15,7 +34,7 @@ public:
 		std::function<void()> updateFunc;
 		Animator* renderFunc;
 		std::string stateName;
-		std::vector<char> activationKeys;
+		std::vector<StateMachine::Key> activationKeys;
 		float cooldown;
 		timePoint tp1;
 		bool activated = true;
@@ -30,7 +49,7 @@ public:
 			}
 		}
 		StateController() = default;
-		StateController(std::function<void()> update, Animator* anim, std::string name, std::vector<char> keys, float cool){
+		StateController(std::function<void()> update, Animator* anim, std::string name, std::vector<Key> keys, float cool){
 			updateFunc = update;
 			renderFunc = anim;
 			stateName = name;
@@ -62,20 +81,29 @@ public:
 		currentState.stateName = state;
 		if(animator != nullptr) delete animator;
 	}
-	void AddState(std::function<void()> func, Animator* anim, std::string name, std::vector<char> keys, float cooldown = 0) {
+	void AddStateComb(std::function<void()> func, Animator* anim, std::string name, std::vector<Key> keys, float cooldown = 0) {
 		StateController* controller = new StateController(func, anim, name, keys, cooldown / 1000);
 		states.push_back(*controller);
 		delete controller;
 		this->currentState = states[0];
 	}
+	void AddState(std::function<void()> func, Animator* anim, std::string name, std::vector<char> keys, float cooldown = 0) {
+		std::vector<Key> keyVec;
+		for (const char& c : keys){
+			keyVec.push_back(StateMachine::Key(c));
+		}
+		AddStateComb(func, anim, name, keyVec, cooldown);
+	}
 	static float GetTimeLapse(timePoint tp1, timePoint tp2) {
 		return std::chrono::duration<float>(tp1 - tp2).count();
 	}
-	static MouseWheel GetMouseWheel(WPARAM wParam) {
-		short delta = GET_WHEEL_DELTA_WPARAM(wParam);
-		if (delta > 0) return MouseWheel::WHEEL_UP;
-		else if (delta < 0) return MouseWheel::WHEEL_DOWN;
-		else return MouseWheel::WHEEL_UNKNOWN;
+	static MouseWheel GetMouseWheel(MSG msg = Structures::Window::message) {
+		if (msg.message == WM_MOUSEWHEEL){
+			short delta = GET_WHEEL_DELTA_WPARAM(msg.wParam);
+			if (delta > 0) return MouseWheel::WHEEL_UP;
+			else if (delta < 0) return MouseWheel::WHEEL_DOWN;
+			else return MouseWheel::WHEEL_UNKNOWN;
+		}
 	}
 	StateController GetCurrentState() {
 		for (int i = 0; i < states.size(); i++) {
@@ -104,9 +132,9 @@ public:
 			std::cout << e.what() << std::endl;
 		}
 		for (StateController state : states) {
-			if (static_cast<int>(state.activationKeys.size()) != 0) {
-				for (char key : state.activationKeys) {
-					if (!this->equals(state.stateName) && isKeyPressed(key)) {
+			if (!state.activationKeys.empty()) {
+				for (auto &key : state.activationKeys) {
+					if (!this->equals(state.stateName) && key.isPressed()) {
 						SetState(state.stateName);
 					}
 				}
@@ -124,8 +152,20 @@ public:
 	static bool isKeyPressed(char a) {
 		return (GetAsyncKeyState((unsigned short)a) & 0x8000);
 	}
-	static bool isKeyReleased(char a) {
-		return isKeyPressed(a) < 0;
+	template<class... Args>
+	static bool isKeyPressed(char a, Args... args) {
+		bool isPressed = StateMachine::isKeyPressed(a);
+		isPressed = isPressed && isKeyPressed(args...);
+		return isPressed;
+	}
+	static bool isKeyReleased(char a, MSG msg = Structures::Window::message) {
+		if (msg.message == WM_KEYUP && a == (char)msg.wParam) return true;
+	}
+	template<class... Args>
+	static bool isKeyReleased(char a, Args... args) {
+		bool isReleased = StateMachine::isKeyReleased(a);
+		isReleased = isReleased && isKeyReleased(args...);
+		return isReleased;
 	}
 	static bool getKeyPressed() {
 		for (int i = 0x01; i < 0xFE; i++) {
@@ -140,7 +180,7 @@ public:
 		POINT* pt = new POINT;
 		GetCursorPos(pt);
 		ScreenToClient(GetActiveWindow(), pt);
-		return { (float)pt->x, (float)pt->y };
+		return Math::float2((float)pt->x, (float)pt->y);
 		delete pt;
 	}
 	static Math::float2 ToScreenCoord(Math::float2 pos) {
@@ -149,7 +189,6 @@ public:
 		ret.y = -Graphics::GetEyeDistance().z * Structures::Window::GetHeight() * (2.0f * pos.y / Structures::Window::GetHeight() - 1.0f);
 		return ret;
 	}
-	static MouseWheel mouseWheel;
 private:
 	using Clock = std::chrono::high_resolution_clock;
 	StateController currentState, previousState;

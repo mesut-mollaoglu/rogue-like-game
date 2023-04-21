@@ -7,7 +7,15 @@ XMVECTOR Structures::Camera::upVector;
 XMMATRIX Structures::Camera::projMatrix;
 XMMATRIX Structures::Camera::viewMatrix;
 XMMATRIX Structures::Camera::worldMatrix;
+float Structures::Camera::fovDegrees;
+float Structures::Camera::fovRadians;
+float Structures::Camera::aspectRatio;
+float Structures::Camera::nearZ;
+float Structures::Camera::farZ;
 HWND Structures::Window::windowHandle;
+XMMATRIX Structures::Camera::rotationDefault;
+XMVECTOR Structures::Camera::defaultForward;
+XMVECTOR Structures::Camera::defaultUp;
 
 Graphics::Graphics() {
 

@@ -79,12 +79,13 @@ public:
     };
     void Update() {
         Math::float3 distance = Graphics::GetEyeDistance();
-        if (StateMachine::mouseWheel == StateMachine::MouseWheel::WHEEL_UP) {
-            if (distance.z > 2.5f) Graphics::SetEyePosition(Math::float3(distance.xy(), distance.z - 0.1f));
+        if (StateMachine::GetMouseWheel() == StateMachine::MouseWheel::WHEEL_UP) {
+            if (distance.z > 2.5f) distance.z -= 0.1f;
         }
-        else if (StateMachine::mouseWheel == StateMachine::MouseWheel::WHEEL_DOWN) {
-            if (distance.z < 7.5f) Graphics::SetEyePosition(Math::float3(distance.xy(), distance.z + 0.1f));
+        else if (StateMachine::GetMouseWheel() == StateMachine::MouseWheel::WHEEL_DOWN) {
+            if (distance.z < 5.0f) distance.z += 0.1f;
         }
+        Graphics::SetEyePosition(distance);
         stateMachine.UpdateState();
     }
     void Render() {
