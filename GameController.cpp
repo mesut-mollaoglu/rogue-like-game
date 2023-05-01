@@ -2,11 +2,14 @@
 #include "Enemy.h"
 #include "Character.h"
 
-void GameController::Load(Sprite* sprite, HWND hwnd) {
+std::string SaveSystem::fileName;
+std::fstream SaveSystem::currentFile;
+
+void GameController::Load(Sprite* sprite) {
     spriteLoader = sprite;
-    enemies.push_back(std::make_unique<Enemy>("EnemyAttackFrames", "EnemyMovingFrames", "EnemyIdleFrames", "EnemyDeadFrames", 152, 148, spriteLoader, gfx));
-    character = std::make_unique<Character>("IdleAnimFrames", "WalkingAnimFrames", "HitAnimFrames", "DashAnimFrames", 192, 138, spriteLoader, gfx);
-    Menu = std::make_unique<MainMenu>(spriteLoader, gfx, hwnd);
+    enemies.push_back(std::make_unique<Enemy>("EnemyAttackFrames", "EnemyMovingFrames", "EnemyIdleFrames", "EnemyDeadFrames", 152, 148, spriteLoader));
+    character = std::make_unique<Character>("IdleAnimFrames", "WalkingAnimFrames", "HitAnimFrames", "DashAnimFrames", 192, 138, spriteLoader);
+    Menu = std::make_unique<MainMenu>(spriteLoader);
     states = mainMenu;
 }
 
@@ -63,43 +66,26 @@ void GameController::Render() {
         break;
     }
     case gameRunning: {
-        D3D11_MAPPED_SUBRESOURCE projectionSubresource;
-        gfx->d3dDeviceContext->Map(gfx->projectionBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &projectionSubresource);
-        Graphics::ProjectionBuffer* projectionMatrix = (Graphics::ProjectionBuffer*)(projectionSubresource.pData);
-        projectionMatrix->proj = Structures::Camera::projMatrix;
-        projectionMatrix->view = Structures::Camera::viewMatrix;
-        projectionMatrix->world = Structures::Camera::worldMatrix;
-        gfx->d3dDeviceContext->Unmap(gfx->projectionBuffer.Get(), 0);
-        D3D11_MAPPED_SUBRESOURCE mappedSubresource;
-        gfx->d3dDeviceContext->Map(gfx->constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
-        Graphics::Constants* constants = (Graphics::Constants*)(mappedSubresource.pData);
-        constants->pos = { character->GetPosition().x / Structures::Window::GetWidth(), character->GetPosition().y / Structures::Window::GetHeight() };
-        constants->horizontalScale = { (character->facingRight) ? -1.0f : 1.0f, 0, 0, 0 };
-        gfx->d3dDeviceContext->Unmap(gfx->constantBuffer.Get(), 0);
-        D3D11_MAPPED_SUBRESOURCE subresource;
-        gfx->d3dDeviceContext->Map(gfx->enemyConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
-        Graphics::Constants* enemyConstants = (Graphics::Constants*)(subresource.pData);
-        enemyConstants->pos = { enemies[0]->GetPosition().x / Structures::Window::GetWidth(), enemies[0]->GetPosition().y / Structures::Window::GetHeight() };
-        enemyConstants->horizontalScale = { (enemies[0]->facingRight) ? -1.0f : 1.0f, 
-            (enemies[0]->isDead) ? 1.0f : 0.0f, 0, 0 };
-        gfx->d3dDeviceContext->Unmap(gfx->enemyConstantBuffer.Get(), 0);
-        gfx->Clear(0.5f, 0.5f, 0.5f, 1.0f);
-        gfx->Begin();
+        using Structures::Camera;
+        Graphics::SetConstantValues<Graphics::ProjectionBuffer>(Graphics::projectionBuffer.Get(), {
+            Camera::projMatrix, Camera::worldMatrix, Camera::viewMatrix});
+        Graphics::Clear(0.5f, 0.5f, 0.5f, 1.0f);
+        Graphics::Begin();
         character->Render();
-        this->gfx->d3dDeviceContext->PSSetShader(this->gfx->pixelShader.Get(), nullptr, 0);
+        Graphics::d3dDeviceContext->PSSetShader(Graphics::pixelShader.Get(), nullptr, 0);
         for (int i = 0; i < enemies.size(); i++){
             if (!enemies[i]->isDead){
                 enemies[i].get()->Render();
-                this->gfx->d3dDeviceContext->PSSetConstantBuffers(0, 1, gfx->enemyConstantBuffer.GetAddressOf());
-                this->gfx->d3dDeviceContext->VSSetConstantBuffers(0, 1, gfx->enemyConstantBuffer.GetAddressOf());
-                this->gfx->d3dDeviceContext->IASetIndexBuffer(enemies[i]->indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-                this->gfx->d3dDeviceContext->IASetVertexBuffers(0, 1, enemies[i]->vertexBuffer.GetAddressOf(), &this->gfx->stride,
-                    &this->gfx->offset);
-                this->gfx->d3dDeviceContext->PSSetShaderResources(0, 1, &enemies[i]->currentFrame);
-                this->gfx->d3dDeviceContext->DrawIndexed(6, 0, 0);
+                Graphics::d3dDeviceContext->PSSetConstantBuffers(0, 1, enemies[i]->constantBuffer.GetAddressOf());
+                Graphics::d3dDeviceContext->VSSetConstantBuffers(0, 1, enemies[i]->constantBuffer.GetAddressOf());
+                Graphics::d3dDeviceContext->IASetIndexBuffer(enemies[i]->indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+                Graphics::d3dDeviceContext->IASetVertexBuffers(0, 1, enemies[i]->vertexBuffer.GetAddressOf(), &Graphics::stride,
+                    &Graphics::offset);
+                Graphics::d3dDeviceContext->PSSetShaderResources(0, 1, &enemies[i]->currentFrame);
+                Graphics::d3dDeviceContext->DrawIndexed(6, 0, 0);
             }
         }
-        gfx->End();
+        Graphics::End();
         break;
     }
     }

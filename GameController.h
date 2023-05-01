@@ -9,7 +9,6 @@ using namespace DirectX;
 
 class GameController {
 protected:
-	Graphics* gfx;
 	Sprite* spriteLoader;
 public:
 	enum State {
@@ -25,10 +24,7 @@ public:
 	std::chrono::time_point<std::chrono::steady_clock> now;
 	std::chrono::milliseconds duration;
 	bool bInit = false;
-	void Init(Graphics* graphics) {
-		this->gfx = graphics;
-	}
-	void Load(Sprite* sprite, HWND hwnd);
+	void Load(Sprite* sprite);
 	void Unload();
 	void Update(HWND windowHandle, MSG msg);
 	void Render();

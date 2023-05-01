@@ -1,41 +1,32 @@
 #pragma once
 
-#include "StateMachine.h"
+#include "SaveSystem.h"
 
 class Character {
 public:
-    Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;
-    Microsoft::WRL::ComPtr<ID3D11Buffer> indexBuffer;
-    Character(const char* idleFrames, const char* walkingFrames, const char* hitFrames, const char* dashFrames, float nWidth, float nHeight, Sprite* spriteLoader, Graphics* graphics)
-        : width(nWidth), height(nHeight), gfx(graphics), sprite(spriteLoader) {
+    ComPtr<ID3D11Buffer> vertexBuffer;
+    ComPtr<ID3D11Buffer> indexBuffer;
+    ComPtr<ID3D11Buffer> constantBuffer;
+    Character(const char* idleFrames, const char* walkingFrames, const char* hitFrames, const char* dashFrames, float nWidth, float nHeight, Sprite* spriteLoader)
+        : width(nWidth), height(nHeight), sprite(spriteLoader) {
         float aspectRatio = (float)width / (float)height;
-        Graphics::Vertex OurVertices[] =
+        Graphics::Vertex vertices[] =
         {
             XMFLOAT2(-0.650 * aspectRatio, -0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0, 1),
             XMFLOAT2(-0.650 * aspectRatio, 0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0, 0),
             XMFLOAT2(0.650 * aspectRatio, 0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1, 0),
             XMFLOAT2(0.650 * aspectRatio, -0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1, 1)
         };
-        DWORD indices[] = {
-            0, 1, 2,
-            0, 2, 3
-        };
-        D3D11_BUFFER_DESC indexBufferDesc = { 0 };
-        indexBufferDesc.ByteWidth = sizeof(indices) * ARRAYSIZE(indices);
-        indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-        indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-        D3D11_SUBRESOURCE_DATA indexSubData = { indices, 0, 0 };
-        this->gfx->d3dDevice.Get()->CreateBuffer(&indexBufferDesc, &indexSubData, this->indexBuffer.GetAddressOf());
-        D3D11_BUFFER_DESC bd = { 0 };
-        bd.ByteWidth = sizeof(Graphics::Vertex) * ARRAYSIZE(OurVertices);
-        bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        D3D11_SUBRESOURCE_DATA srd = { OurVertices, 0, 0 };
-        this->gfx->d3dDevice->CreateBuffer(&bd, &srd, this->vertexBuffer.GetAddressOf());
+        Graphics::CreateVertexBuffer(vertexBuffer, vertices, ARRAYSIZE(vertices));
+        Graphics::CreateIndexBuffer(indexBuffer);
+        Graphics::CreateConstantBuffer<Graphics::Constants>(constantBuffer);
         stateMachine.AddState(walking, new Animator(sprite->LoadFromDir(walkingFrames, nWidth, nHeight), 250), "Walking", {'W', 'A', 'S', 'D'});
         stateMachine.AddState(idle, new Animator(sprite->LoadFromDir(idleFrames, nWidth, nHeight), 250), "Idle", {});
         stateMachine.AddState(dash, new Animator(sprite->LoadFromDir(dashFrames, nWidth, nHeight), 50, true), "Dash", {VK_SHIFT}, 2500);
         stateMachine.AddState(attack, new Animator(sprite->LoadFromDir(hitFrames, nWidth, nHeight), 125, true), "Attack", {VK_LBUTTON});
         stateMachine.SetState("Idle");
+        SaveSystem::FileInit("Character.txt");
+        StringToPosition();
     }
     std::function<void()> walking = [&, this]() {
         states = States::LoadDash;
@@ -53,6 +44,10 @@ public:
         if (StateMachine::isKeyPressed('S')) {
             position -= {0, speed};
         }
+        if (!SaveSystem::isCurrentFile("Character.txt"))
+            SaveSystem::FileInit("Character.txt");
+        SaveSystem::DeleteLine(1);
+        this->PositionToString();
     };
     std::function<void()> dash = [&, this]() {
         switch (states) {
@@ -78,24 +73,20 @@ public:
         states = States::LoadDash; 
     };
     void Update() {
-        Math::float3 distance = Graphics::GetEyeDistance();
-        if (StateMachine::GetMouseWheel() == StateMachine::MouseWheel::WHEEL_UP) {
-            if (distance.z > 2.5f) distance.z -= 0.1f;
-        }
-        else if (StateMachine::GetMouseWheel() == StateMachine::MouseWheel::WHEEL_DOWN) {
-            if (distance.z < 5.0f) distance.z += 0.1f;
-        }
-        Graphics::SetEyePosition(distance);
+        Graphics::SetEyePosition(Math::float3(0, 0, 5));
         stateMachine.UpdateState();
     }
     void Render() {
+        Graphics::SetConstantValues<Graphics::Constants>(this->constantBuffer.Get(), { XMFLOAT2{(this->GetPosition().x - Graphics::GetEyeDistance().x) / Structures::Window::GetWidth(),
+            (this->GetPosition().y - Graphics::GetEyeDistance().y) / Structures::Window::GetHeight()}, XMFLOAT2{0, 0}, XMFLOAT4{(this->facingRight) ? -1.0f : 1.0f, 0, 0, 0} });
         ID3D11ShaderResourceView* currentFrame = stateMachine.RenderState();
-        this->gfx->d3dDeviceContext->VSSetConstantBuffers(0, 1, gfx->constantBuffer.GetAddressOf());
-        this->gfx->d3dDeviceContext->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-        this->gfx->d3dDeviceContext->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &gfx->stride,
-            &gfx->offset);
-        this->gfx->d3dDeviceContext->PSSetShaderResources(0, 1, &currentFrame);
-        this->gfx->d3dDeviceContext->DrawIndexed(6, 0, 0);
+        Graphics::d3dDeviceContext->VSSetConstantBuffers(0, 1, constantBuffer.GetAddressOf()); 
+        Graphics::d3dDeviceContext->PSSetConstantBuffers(0, 1, constantBuffer.GetAddressOf());
+        Graphics::d3dDeviceContext->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+        Graphics::d3dDeviceContext->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &Graphics::stride,
+            &Graphics::offset);
+        Graphics::d3dDeviceContext->PSSetShaderResources(0, 1, &currentFrame);
+        Graphics::d3dDeviceContext->DrawIndexed(6, 0, 0);
     }
     Math::float2 GetPosition() {
         return position;
@@ -109,6 +100,14 @@ public:
     void SetPosition(Math::float2 pos) {
         this->position = pos;
     }
+    void StringToPosition() {
+        if (!SaveSystem::isCurrentFile("Character.txt")) return;
+        std::string data = SaveSystem::ReadData();
+        this->position.toFloat(data);
+    }
+    void PositionToString() {
+        SaveSystem::WriteData(this->position.toString(), true);
+    }
     float width, height;
     enum class States {
         LoadDash,
@@ -120,7 +119,7 @@ public:
         return stateMachine;
     }
 private:
-    Math::float2 position = { -2000, 100 };
+    Math::float2 position;
     float health = 100.0f;
     float distance = 0.0f, angle = 0.0f;
     void Flip() {
@@ -128,6 +127,5 @@ private:
     }
     float speed = 10.0f;
     StateMachine stateMachine;
-    Graphics* gfx;
     Sprite* sprite;
 };

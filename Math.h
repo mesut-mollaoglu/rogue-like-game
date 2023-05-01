@@ -1,6 +1,7 @@
 #pragma once
 #include <math.h>
 #include <stdint.h>
+#include <sstream>
 #if defined min
 #undef min
 #endif
@@ -70,6 +71,24 @@ public:
         void Normalize() {
             x /= GetLength();
             y /= GetLength();
+        }
+        float2 lerp(const float2& vec, float f)
+        {
+            float2 ret;
+            ret.x = Math::Lerp<float>(ret.x, vec.x, f);
+            ret.y = Math::Lerp<float>(ret.y, vec.y, f);
+            return ret;
+        }
+        std::string toString() {
+            return std::to_string(x) + " " + std::to_string(y);
+        }
+        float2 toFloat(const std::string& data) {
+            std::stringstream ss(data);
+            std::string m_x, m_y;
+            ss >> m_x;
+            ss >> m_y;
+            x = atoi(m_x.c_str());
+            y = atoi(m_y.c_str());
         }
     }float2;
     typedef struct float3 {
@@ -144,6 +163,10 @@ public:
     }float3;
     static Math::float2 F3ToF2(Math::float3 vec3) {
         return {vec3.x, vec3.y};
+    }
+    template<class T>
+    static constexpr T Lerp(T a, T b, T rate) {
+        return a + (b - a) * rate;
     }
     static Math::float2 toVector(float angle) {
         Math::float2 ret;

@@ -2,10 +2,10 @@
 
 #include "Animation.h"
 #include <string>
+#include <algorithm>
 
 class StateMachine {
 public:
-	const static int maxKeyCombs = 3;
 	typedef struct Key {
 		std::vector<char> keys;
 		Key() = default;
@@ -21,7 +21,14 @@ public:
 			Add(args...);
 		}
 		bool isPressed() {
-			return StateMachine::isKeyPressed(*keys.data());
+			bool keyPressed = true;
+			std::for_each(keys.begin(), keys.end(), [&, this](char a) {keyPressed &= StateMachine::isKeyPressed(a); });
+			return keyPressed;
+		}
+		bool isReleased() {
+			bool keyPressed = true;
+			std::for_each(keys.begin(), keys.end(), [&, this](char a) {keyPressed &= StateMachine::isKeyReleased(a); });
+			return keyPressed;
 		}
 	}Key;
 	static enum class MouseWheel {
@@ -81,13 +88,13 @@ public:
 		currentState.stateName = state;
 		if(animator != nullptr) delete animator;
 	}
-	void AddStateComb(std::function<void()> func, Animator* anim, std::string name, std::vector<Key> keys, float cooldown = 0) {
+	virtual void AddStateComb(std::function<void()> func, Animator* anim, std::string name, std::vector<Key> keys, float cooldown = 0) {
 		StateController* controller = new StateController(func, anim, name, keys, cooldown / 1000);
 		states.push_back(*controller);
 		delete controller;
 		this->currentState = states[0];
 	}
-	void AddState(std::function<void()> func, Animator* anim, std::string name, std::vector<char> keys, float cooldown = 0) {
+	virtual void AddState(std::function<void()> func, Animator* anim, std::string name, std::vector<char> keys, float cooldown = 0) {
 		std::vector<Key> keyVec;
 		for (const char& c : keys){
 			keyVec.push_back(StateMachine::Key(c));
@@ -191,6 +198,7 @@ public:
 	}
 private:
 	using Clock = std::chrono::high_resolution_clock;
-	StateController currentState, previousState;
+	StateController currentState;
+	StateController previousState;
 	std::vector<StateController> states;
 };

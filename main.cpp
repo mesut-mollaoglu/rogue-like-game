@@ -40,10 +40,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 		delete graphics;
 		return -1;
 	}
-	controller->Init(graphics);
 	spriteLoader->Init(graphics);
 	ShowWindow(windowHandle, nCmdShow);
-	controller->Load(spriteLoader, windowHandle);
+	controller->Load(spriteLoader);
 	Structures::Window::message.message = WM_NULL;
 	while (Structures::Window::message.message != WM_QUIT) {
 		if (PeekMessage(&Structures::Window::message, NULL, 0, 0, PM_REMOVE)) {
@@ -55,5 +54,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 			controller->Update(windowHandle, Structures::Window::message);
 		}
 	}
+	SaveSystem::Exit();
 	return 0;
 }

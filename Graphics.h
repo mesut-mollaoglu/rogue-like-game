@@ -14,6 +14,7 @@
 #include <vector>
 #include <utility>
 #include "Math.h"
+#include <initializer_list>
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -78,14 +79,14 @@ public:
 	bool InitGraphics(HWND hwnd);
 	Graphics();
 	~Graphics();
-	ID2D1RenderTarget* GetRenderTarget() {
-		return renderTarget.Get();
+	static ID2D1RenderTarget* GetRenderTarget() {
+		return Graphics::renderTarget.Get();
 	}
-	ID2D1Factory1* GetFactory() {
-		return factory.Get();
+	static ID2D1Factory1* GetFactory() {
+		return Graphics::factory.Get();
 	}
-	IDWriteFactory5* getWriteFactory() {
-		return dWriteFactory.Get();
+	static IDWriteFactory5* getWriteFactory() {
+		return Graphics::dWriteFactory.Get();
 	}
 	typedef struct Vertex {
 		XMFLOAT2 pos;
@@ -110,41 +111,59 @@ public:
 		XMMATRIX world;
 		XMMATRIX view;
 	}ProjBuffer;
-	void Clear(float r, float g, float b, float a);
-	void Begin();
-	void End();
-	HRESULT InitWritingFactory();
-	UINT stride, offset;
+	static void Clear(float r, float g, float b, float a);
+	static void Begin();
+	static void End();
+	static HRESULT InitWritingFactory();
+	static UINT stride, offset;
 	HWND windowHandle;
-	ComPtr<ID3D11InputLayout> inputLayout;
-	ComPtr<ID3D11Buffer> projectionBuffer;	
-	ComPtr<ID3D11Buffer> enemyConstantBuffer;
-	ComPtr<ID3D11Buffer> constantBuffer;
-	ComPtr<ID3D11SamplerState> samplerState;
-	ComPtr<ID3D11PixelShader> mainPixelShader;
-	ComPtr<ID3D11PixelShader> pixelShader;
-	ComPtr<ID3D11VertexShader> vertexShader;
-	ComPtr<ID2D1SolidColorBrush> blackColor;
-	ComPtr<ID2D1SolidColorBrush> whiteColor;
-	ComPtr<ID2D1SolidColorBrush> snowColor;
-	void DrawTextF(std::wstring text, float x, float y, float width, float height, ID2D1Brush* color);
-	ComPtr<ID3D11Device> d3dDevice;
-	ComPtr<ID3D11DeviceContext> d3dDeviceContext;
-	ComPtr<ID3D11DepthStencilState> depthStencilState;
-	ComPtr<IDXGISwapChain> swapChain;
-	ComPtr<ID3D11RenderTargetView> renderTargetView;
-	ComPtr<ID3D11RasterizerState> rasterizerState;
+	static ComPtr<ID3D11InputLayout> inputLayout;
+	static ComPtr<ID3D11Buffer> projectionBuffer;
+	static ComPtr<ID3D11SamplerState> samplerState;
+	static ComPtr<ID3D11PixelShader> mainPixelShader;
+	static ComPtr<ID3D11PixelShader> pixelShader;
+	static ComPtr<ID3D11VertexShader> vertexShader;
+	static ComPtr<ID2D1SolidColorBrush> blackColor;
+	static ComPtr<ID2D1SolidColorBrush> whiteColor;
+	static ComPtr<ID2D1SolidColorBrush> snowColor;
+	static void DrawTextF(std::wstring text, float x, float y, float width, float height, ID2D1Brush* color);
+	static ComPtr<ID3D11Device> d3dDevice;
+	static ComPtr<ID3D11DeviceContext> d3dDeviceContext;
+	static ComPtr<ID3D11DepthStencilState> depthStencilState;
+	static ComPtr<IDXGISwapChain> swapChain;
+	static ComPtr<ID3D11RenderTargetView> renderTargetView;
+	static ComPtr<ID3D11RasterizerState> rasterizerState;
 	float renderTargetWidth, renderTargetHeight;
-protected:
+	static HRESULT CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer, Graphics::Vertex* vertex, UINT numVertices);
+	static HRESULT CreateIndexBuffer(ComPtr<ID3D11Buffer>& indexBuffer, DWORD* indices = 0, UINT numIndices = 0);
+	static HRESULT CreatePixelShader(std::wstring filename, ComPtr<ID3D11PixelShader>& shader);
+	static HRESULT CreateVertexShader(std::wstring filename, ComPtr<ID3D11VertexShader>& shader, ComPtr<ID3D11InputLayout>& inputLayout, D3D11_INPUT_ELEMENT_DESC* desc, UINT arraySize);
+	template <class T> static HRESULT CreateConstantBuffer(ComPtr<ID3D11Buffer>& buffer) {
+		D3D11_BUFFER_DESC constantBufferDesc = {};
+		constantBufferDesc.ByteWidth = sizeof(T) + 0xf & 0xfffffff0;
+		constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+		constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		HRESULT hr = d3dDevice->CreateBuffer(&constantBufferDesc, nullptr, buffer.GetAddressOf());
+		return hr;
+	}
+	template <class T>
+	static void SetConstantValues(ComPtr<ID3D11Buffer> buffer, T data) {
+		D3D11_MAPPED_SUBRESOURCE projectionSubresource;
+		Graphics::d3dDeviceContext->Map(buffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &projectionSubresource);
+		CopyMemory(projectionSubresource.pData, &data, sizeof(T));
+		Graphics::d3dDeviceContext->Unmap(buffer.Get(), 0);
+	}
+private:
 	ComPtr<IDXGIFactory1> dxgiFactory;
 	ComPtr<IDXGIAdapter1> adapter;
 	ComPtr<IDXGIDevice> dxgiDevice;
-	ComPtr<ID2D1Factory1> factory;
-	ComPtr<IDWriteFactory5> dWriteFactory;
-	ComPtr<IDWriteTextFormat> textFormat;
-	ComPtr<IDWriteTextLayout> textLayout;
+	static ComPtr<ID2D1Factory1> factory;
+	static ComPtr<IDWriteFactory5> dWriteFactory;
+	static ComPtr<IDWriteTextFormat> textFormat;
+	static ComPtr<IDWriteTextLayout> textLayout;
 	ComPtr<ID2D1RenderTarget> dxgiRenderTarget;
-	ComPtr<ID2D1HwndRenderTarget> renderTarget;
+	static ComPtr<ID2D1HwndRenderTarget> renderTarget;
 	ComPtr<ID3D11Texture2D> renderTargetTexture;
 	ComPtr<ID3D11Texture2D> backBuffer;
 };

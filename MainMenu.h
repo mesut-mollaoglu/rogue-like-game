@@ -4,7 +4,7 @@
 
 class MainMenu {
 public:
-	MainMenu(Sprite* sprite, Graphics* graphics, HWND windowHandle):spriteLoader(sprite), gfx(graphics), hwnd(windowHandle){
+	MainMenu(Sprite* sprite):spriteLoader(sprite){
 		background = spriteLoader->LoadSprite(L"MenuContent\\main menu.png", 160, 90, this->background.Get());
 		exitButton = spriteLoader->LoadSprite(L"MenuContent\\exit.png", 26, 13, this->exitButton.Get());
 		playButton = spriteLoader->LoadSprite(L"MenuContent\\start.png", 34, 13, this->playButton.Get());
@@ -12,14 +12,14 @@ public:
 		creditsButton = spriteLoader->LoadSprite(L"MenuContent\\credits.png", 40, 13, this->creditsButton.Get());
 		credits = spriteLoader->LoadSprite(L"MenuContent\\credits_screen.png", 160, 90, this->credits.Get());
 		menuStates = main;
-		Vsync = new Button<bool>(gfx, hwnd, gfx->renderTargetWidth / 2 - 250, 200, 500, 20, nullptr, L"VSYNC: ");
-		Play = new Button<bool>(gfx, hwnd, horizontalPos(playButton.Get()), 320, 238, 91, playButton.Get(), L"");
-		Credits = new Button<bool>(gfx, hwnd, horizontalPos(creditsButton.Get()), 420, 280, 91, creditsButton.Get(), L"");
-		Settings = new Button<bool>(gfx, hwnd, horizontalPos(settingsButton.Get()), 520, 322, 91, settingsButton.Get(), L"");
-		Exit = new Button<bool>(gfx, hwnd, horizontalPos(exitButton.Get()), 620, 182, 91, exitButton.Get(), L"");
+		Vsync = new Button<bool>(Structures::Window::GetWidth() / 2 - 250, 200, 500, 20, nullptr, L"VSYNC: ");
+		Play = new Button<bool>(horizontalPos(playButton.Get()), 320, 238, 91, playButton.Get());
+		Credits = new Button<bool>(horizontalPos(creditsButton.Get()), 420, 280, 91, creditsButton.Get());
+		Settings = new Button<bool>(horizontalPos(settingsButton.Get()), 520, 322, 91, settingsButton.Get());
+		Exit = new Button<bool>(horizontalPos(exitButton.Get()), 620, 182, 91, exitButton.Get());
 	}
 	float horizontalPos(ID2D1Bitmap* bitmap) {
-		return (gfx->renderTargetWidth / 2 - 7 * bitmap->GetSize().width / 2);
+		return (Structures::Window::GetWidth() / 2 - 7 * bitmap->GetSize().width / 2);
 	}
 	void Update() {
 		switch (menuStates) {
@@ -45,15 +45,15 @@ public:
 		}
 	}
 	void Render() {
-		this->gfx->GetRenderTarget()->BeginDraw();
+		Graphics::GetRenderTarget()->BeginDraw();
 		switch (menuStates) {
 		case main: {
-			this->gfx->GetRenderTarget()->Clear(D2D1::ColorF(D2D1::ColorF::Black));
-			this->gfx->GetRenderTarget()->DrawBitmap(background.Get(), D2D1::RectF(0, 0,
-				gfx->renderTargetWidth, gfx->renderTargetHeight),
+			Graphics::GetRenderTarget()->Clear(D2D1::ColorF(D2D1::ColorF::Black));
+			Graphics::GetRenderTarget()->DrawBitmap(background.Get(), D2D1::RectF(0, 0,
+				Structures::Window::GetWidth(), Structures::Window::GetHeight()),
 				1.0f,
 				D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
-				D2D1::RectF(0, 0, gfx->renderTargetWidth, gfx->renderTargetHeight));
+				D2D1::RectF(0, 0, Structures::Window::GetWidth(), Structures::Window::GetHeight()));
 			Play->RenderButton();
 			Credits->RenderButton();
 			Exit->RenderButton();
@@ -61,17 +61,17 @@ public:
 			break;
 		}
 		case creditsScreen: {
-			this->gfx->GetRenderTarget()->DrawBitmap(credits.Get(), D2D1::RectF(0, 0,
-				gfx->renderTargetWidth, gfx->renderTargetHeight), 
+			Graphics::GetRenderTarget()->DrawBitmap(credits.Get(), D2D1::RectF(0, 0,
+				Structures::Window::GetWidth(), Structures::Window::GetHeight()), 
 				1.0f,
 				D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, 
-				D2D1::RectF(0, 0, gfx->renderTargetWidth, gfx->renderTargetHeight));
+				D2D1::RectF(0, 0, Structures::Window::GetWidth(), Structures::Window::GetHeight()));
 			break;
 		}
 		case settings: {
-			this->gfx->GetRenderTarget()->Clear(D2D1::ColorF(D2D1::ColorF::Black));
-			this->gfx->DrawTextF(L"OPTIONS", gfx->renderTargetWidth / 2 - 250, 
-				100, 500, 20, gfx->whiteColor.Get());
+			Graphics::GetRenderTarget()->Clear(D2D1::ColorF(D2D1::ColorF::Black));
+			Graphics::DrawTextF(L"OPTIONS", Structures::Window::GetWidth() / 2 - 250,
+				100, 500, 20, Graphics::whiteColor.Get());
 			Vsync->RenderButton();
 			break;
 		}
@@ -84,12 +84,11 @@ public:
 			credits->Release();
 		}
 		}
-		this->gfx->GetRenderTarget()->EndDraw();
+		Graphics::GetRenderTarget()->EndDraw();
 	}
 	bool bGameRunning;
 	Button<bool>* Vsync;
 private:
-	HWND hwnd;
 	enum MenuStates {
 		main, 
 		exit,
@@ -102,12 +101,11 @@ private:
 	Button<bool>* Settings;
 	Button<bool>* Credits;
 	MenuStates menuStates;
-	Microsoft::WRL::ComPtr<ID2D1Bitmap> background;
-	Microsoft::WRL::ComPtr<ID2D1Bitmap> exitButton;
-	Microsoft::WRL::ComPtr<ID2D1Bitmap> playButton;
-	Microsoft::WRL::ComPtr<ID2D1Bitmap> settingsButton;
-	Microsoft::WRL::ComPtr<ID2D1Bitmap> creditsButton;
-	Microsoft::WRL::ComPtr<ID2D1Bitmap> credits;
-	Graphics* gfx;
+	ComPtr<ID2D1Bitmap> background;
+	ComPtr<ID2D1Bitmap> exitButton;
+	ComPtr<ID2D1Bitmap> playButton;
+	ComPtr<ID2D1Bitmap> settingsButton;
+	ComPtr<ID2D1Bitmap> creditsButton;
+	ComPtr<ID2D1Bitmap> credits;
 	Sprite* spriteLoader;
 };

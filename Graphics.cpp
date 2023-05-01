@@ -1,5 +1,9 @@
 #include "Graphics.h"
 
+UINT Graphics::stride = sizeof(Graphics::Vertex);
+UINT Graphics::offset = 0;
+ComPtr<ID3D11Device> Graphics::d3dDevice = nullptr;
+ComPtr<ID3D11DeviceContext> Graphics::d3dDeviceContext = nullptr;
 Math::float3 Structures::Camera::Position;
 XMVECTOR Structures::Camera::eyePos;
 XMVECTOR Structures::Camera::lookAtPos;
@@ -12,10 +16,28 @@ float Structures::Camera::fovRadians;
 float Structures::Camera::aspectRatio;
 float Structures::Camera::nearZ;
 float Structures::Camera::farZ;
-HWND Structures::Window::windowHandle;
+HWND Structures::Window::windowHandle = GetActiveWindow();
 XMMATRIX Structures::Camera::rotationDefault;
 XMVECTOR Structures::Camera::defaultForward;
 XMVECTOR Structures::Camera::defaultUp;
+ComPtr<ID3D11DepthStencilState> Graphics::depthStencilState;
+ComPtr<IDXGISwapChain> Graphics::swapChain;
+ComPtr<ID3D11RenderTargetView> Graphics::renderTargetView;
+ComPtr<ID3D11RasterizerState> Graphics::rasterizerState;
+ComPtr<ID3D11InputLayout> Graphics::inputLayout;
+ComPtr<ID3D11Buffer> Graphics::projectionBuffer;
+ComPtr<ID3D11SamplerState> Graphics::samplerState;
+ComPtr<ID3D11PixelShader> Graphics::mainPixelShader;
+ComPtr<ID3D11PixelShader> Graphics::pixelShader;
+ComPtr<ID3D11VertexShader> Graphics::vertexShader;
+ComPtr<ID2D1Factory1> Graphics::factory;
+ComPtr<IDWriteFactory5> Graphics::dWriteFactory;
+ComPtr<IDWriteTextFormat> Graphics::textFormat;
+ComPtr<IDWriteTextLayout> Graphics::textLayout;
+ComPtr<ID2D1HwndRenderTarget> Graphics::renderTarget;
+ComPtr<ID2D1SolidColorBrush> Graphics::blackColor;
+ComPtr<ID2D1SolidColorBrush> Graphics::whiteColor;
+ComPtr<ID2D1SolidColorBrush> Graphics::snowColor;
 
 Graphics::Graphics() {
 
@@ -33,25 +55,84 @@ Graphics::~Graphics() {
 void Graphics::Clear(float r, float g, float b, float a)
 {
 	const float color[4] = { r, g, b, a };
- 	this->d3dDeviceContext->ClearRenderTargetView(this->renderTargetView.Get(), color);
+ 	Graphics::d3dDeviceContext->ClearRenderTargetView(Graphics::renderTargetView.Get(), color);
 }
 
 void Graphics::Begin()
 {
-	this->d3dDeviceContext->OMSetDepthStencilState(this->depthStencilState.Get(), 1);
-	this->d3dDeviceContext->RSSetState(this->rasterizerState.Get());
-	this->d3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	this->d3dDeviceContext->VSSetShader(this->vertexShader.Get(), nullptr, 0);
-	this->d3dDeviceContext->PSSetShader(this->mainPixelShader.Get(), nullptr, 0);
-	this->d3dDeviceContext->PSSetConstantBuffers(0, 1, this->constantBuffer.GetAddressOf());
-	this->d3dDeviceContext->IASetInputLayout(this->inputLayout.Get());
-	this->d3dDeviceContext->PSSetSamplers(0, 1, this->samplerState.GetAddressOf());
-	this->d3dDeviceContext->VSSetConstantBuffers(1, 1, this->projectionBuffer.GetAddressOf());
+	Graphics::d3dDeviceContext->OMSetDepthStencilState(Graphics::depthStencilState.Get(), 1);
+	Graphics::d3dDeviceContext->RSSetState(Graphics::rasterizerState.Get());
+	Graphics::d3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	Graphics::d3dDeviceContext->VSSetShader(Graphics::vertexShader.Get(), nullptr, 0);
+	Graphics::d3dDeviceContext->PSSetShader(Graphics::mainPixelShader.Get(), nullptr, 0);
+	Graphics::d3dDeviceContext->IASetInputLayout(Graphics::inputLayout.Get());
+	Graphics::d3dDeviceContext->PSSetSamplers(0, 1, Graphics::samplerState.GetAddressOf());
+	Graphics::d3dDeviceContext->VSSetConstantBuffers(1, 1, Graphics::projectionBuffer.GetAddressOf());
 }
 
 void Graphics::End()
 {
-	this->swapChain->Present(1, NULL);
+	Graphics::swapChain->Present(1, NULL);
+}
+
+HRESULT Graphics::CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer, Graphics::Vertex* vertex, UINT numVertices) {
+	D3D11_BUFFER_DESC bd = { 0 };
+	bd.ByteWidth = sizeof(Graphics::Vertex) * numVertices;
+	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	D3D11_SUBRESOURCE_DATA srd = { vertex, 0, 0 };
+	HRESULT hr = Graphics::d3dDevice->CreateBuffer(&bd, &srd, vertexBuffer.GetAddressOf());
+	return hr;
+}
+
+HRESULT Graphics::CreateIndexBuffer(ComPtr<ID3D11Buffer>& indexBuffer, DWORD* indices, UINT numIndices) {
+	DWORD defaultIndices[] = {
+		0, 1, 2,
+		0, 2, 3
+	};
+	if (indices == 0 || numIndices == 0) {
+		indices = defaultIndices;
+		numIndices = ARRAYSIZE(defaultIndices);
+	}
+	D3D11_BUFFER_DESC indexBufferDesc = { 0 };
+	indexBufferDesc.ByteWidth = sizeof(indices) * numIndices;
+	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	D3D11_SUBRESOURCE_DATA indexSubData = { indices, 0, 0 };
+	HRESULT hr = Graphics::d3dDevice.Get()->CreateBuffer(&indexBufferDesc, &indexSubData, indexBuffer.GetAddressOf());
+	return hr;
+	delete defaultIndices;
+}
+
+HRESULT Graphics::CreatePixelShader(std::wstring filename, ComPtr<ID3D11PixelShader>& shader) {
+	shader = nullptr;
+	ID3DBlob* pixelShaderBlob;
+	HRESULT hr = D3DCompileFromFile(filename.c_str(), nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG, 0, &pixelShaderBlob, nullptr);
+	if (FAILED(hr)) {
+		MessageBox(Structures::Window::windowHandle, L"Error: Can't create shader.", L"Error", MB_OK);
+	}
+	assert(SUCCEEDED(hr));
+	hr = Graphics::d3dDevice.Get()->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), nullptr,
+		shader.GetAddressOf());
+	if (FAILED(hr)) { MessageBox(Structures::Window::windowHandle, L"Error: Can't create shader.", L"Error", MB_OK); }
+	pixelShaderBlob->Release();
+	return hr;
+}
+
+HRESULT Graphics::CreateVertexShader(std::wstring filename, ComPtr<ID3D11VertexShader>& shader, ComPtr<ID3D11InputLayout>& inputLayout, D3D11_INPUT_ELEMENT_DESC* desc, UINT arraySize) {
+	shader = nullptr;
+	ID3DBlob* vertexShaderBlob;
+	HRESULT hr = D3DCompileFromFile(filename.c_str(), nullptr, nullptr, "main", "vs_5_0", D3DCOMPILE_DEBUG, 0, &vertexShaderBlob, nullptr);
+	if (FAILED(hr)) {
+		MessageBox(Structures::Window::windowHandle, L"Error: Can't create shader.", L"Error", MB_OK);
+	}
+	assert(SUCCEEDED(hr));
+	hr = Graphics::d3dDevice.Get()->CreateVertexShader(vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), nullptr,
+		shader.GetAddressOf());
+	if (FAILED(hr)) { MessageBox(Structures::Window::windowHandle, L"Error: Can't create shader.", L"Error", MB_OK); }
+	Graphics::d3dDevice->CreateInputLayout(desc, arraySize, vertexShaderBlob->GetBufferPointer(),
+		vertexShaderBlob->GetBufferSize(), inputLayout.GetAddressOf());
+	vertexShaderBlob->Release();
+	return hr;
 }
 
 HRESULT Graphics::InitWritingFactory() {
@@ -208,82 +289,16 @@ bool Graphics::InitGraphics(HWND hwnd) {
 	renderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Gray, 0.3f), snowColor.GetAddressOf());
 	if (hr != S_OK) return false;
 	}
-	//Input layout, pixel shader and vertex shader creation.
-	{
-	ID3DBlob* pixelShaderBlob;
-	HRESULT hr = D3DCompileFromFile(L"MainPixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG, 0, &pixelShaderBlob, nullptr);
-	if (FAILED(hr)) {
-		hr = D3DCompileFromFile(L"MainPixelShader.cso", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG, 0, &pixelShaderBlob, nullptr);
-	}
-	assert(SUCCEEDED(hr));
-	hr = this->d3dDevice.Get()->CreatePixelShader(pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize(), nullptr,
-		mainPixelShader.GetAddressOf());
-	if (FAILED(hr)) { MessageBox(hwnd, L"Error: Can't create shader.", L"Error", MB_OK); }
-	pixelShaderBlob->Release();
-	ID3DBlob* shaderBlob;
-	hr = D3DCompileFromFile(L"PixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG, 0, &shaderBlob, nullptr);
-	if (FAILED(hr)) {
-		hr = D3DCompileFromFile(L"PixelShader.cso", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG, 0, &shaderBlob, nullptr); 
-	}
-	assert(SUCCEEDED(hr));
-	hr = this->d3dDevice.Get()->CreatePixelShader(shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), nullptr,
-		pixelShader.GetAddressOf());
-	if (FAILED(hr)) { MessageBox(hwnd, L"Error: Can't create shader.", L"Error", MB_OK); }
-	shaderBlob->Release();
-	ID3DBlob* vertexShaderBlob;
-	hr = D3DCompileFromFile(L"VertexShader.hlsl", nullptr, nullptr, "main", "vs_5_0", D3DCOMPILE_DEBUG, 0, &vertexShaderBlob, nullptr);
-	if (FAILED(hr)) { 
-		hr = D3DCompileFromFile(L"VertexShader.cso", nullptr, nullptr, "main", "vs_5_0", D3DCOMPILE_DEBUG, 0, &vertexShaderBlob, nullptr);
-	}
-	assert(SUCCEEDED(hr));
-	hr = this->d3dDevice.Get()->CreateVertexShader(vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize(), nullptr,
-		vertexShader.GetAddressOf());
-	if (FAILED(hr)) { MessageBox(hwnd, L"Error: Can't create shader.", L"Error", MB_OK); }
 	D3D11_INPUT_ELEMENT_DESC ied[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
-	this->d3dDevice->CreateInputLayout(ied, ARRAYSIZE(ied), vertexShaderBlob->GetBufferPointer(),
-		vertexShaderBlob->GetBufferSize(), inputLayout.GetAddressOf());
-	vertexShaderBlob->Release();
-	stride = sizeof(Vertex);
-	offset = 0;
-	}
-	//Constant buffer to manage the position of the character
-	{
-		D3D11_BUFFER_DESC constantBufferDesc = {};
-		constantBufferDesc.ByteWidth = sizeof(Constants) + 0xf & 0xfffffff0;
-		constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-		constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	
-		HRESULT hResult = d3dDevice->CreateBuffer(&constantBufferDesc, nullptr, constantBuffer.GetAddressOf());
-		assert(SUCCEEDED(hResult));
-	}
-	//Constant buffer to control the projection
-	{
-		D3D11_BUFFER_DESC projectionBufferDesc = {};
-		projectionBufferDesc.ByteWidth = sizeof(ProjectionBuffer);
-		projectionBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-		projectionBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		projectionBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	
-		HRESULT hResult = d3dDevice->CreateBuffer(&projectionBufferDesc, nullptr, projectionBuffer.GetAddressOf());
-		assert(SUCCEEDED(hResult));
-	}
-	//Creating a constant buffer for the enemy.
-	{
-		D3D11_BUFFER_DESC bufferDesc = {};
-		bufferDesc.ByteWidth = sizeof(Constants);
-		bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-		bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-		HRESULT hResult = d3dDevice->CreateBuffer(&bufferDesc, nullptr, enemyConstantBuffer.GetAddressOf());
-		assert(SUCCEEDED(hResult));
-	}
+	Graphics::CreatePixelShader(L"MainPixelShader.hlsl", this->mainPixelShader);
+	Graphics::CreatePixelShader(L"PixelShader.hlsl", this->pixelShader);
+	Graphics::CreateVertexShader(L"VertexShader.hlsl", this->vertexShader, this->inputLayout, ied, ARRAYSIZE(ied));
+	Graphics::CreateConstantBuffer<Graphics::ProjectionBuffer>(projectionBuffer);
 	Graphics::SetEyePosition(Math::float3(0.0f, 0.0f, 5.0f));
 	return true;
 }

@@ -29,6 +29,5 @@ float4 main(float2 texcoord : TEXCOORD, float4 color : COLOR) : SV_TARGET{
     output.b = dot(val.rgb, blue);
     clip(round(val.a) == 0 ? -1 : 1);
     float4 ret = float4(output, val.a);
-    if (horizontalScale.y == 1.0f) ret.a = lerp(0.0f, ret.a, 0.5f);
     return ret;
 }

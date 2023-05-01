@@ -6,46 +6,33 @@ using namespace DirectX;
 
 class Enemy {
 public:
-	Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> indexBuffer;
-	struct Vertex {
-		XMFLOAT2 pos;
-		XMFLOAT4 color;
-		XMFLOAT2 tex;
-	};
-	Enemy(const char* attackDir, const char* moveDir, const char* idleDir, const char* deadDir, int nWidth, int nHeight, Sprite* sprite, Graphics* graphics) : spriteLoader(sprite),
-		width(nWidth), height(nHeight), gfx(graphics) {
+	ComPtr<ID3D11Buffer> vertexBuffer;
+	ComPtr<ID3D11Buffer> indexBuffer;
+	ComPtr<ID3D11Buffer> constantBuffer;
+	Enemy(const char* attackDir, const char* moveDir, const char* idleDir, const char* deadDir, int nWidth, int nHeight, Sprite* sprite) : spriteLoader(sprite),
+		width(nWidth), height(nHeight) {
 		float aspectRatio = (float)width / (float)height;
-		Vertex OurVertices[] =
+		Graphics::Vertex vertices[] =
 		{
 			XMFLOAT2(-0.875 * aspectRatio, -0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0, 1),
 			XMFLOAT2(-0.875 * aspectRatio, 0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0, 0),
 			XMFLOAT2(0.875 * aspectRatio, 0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1, 0),
 			XMFLOAT2(0.875 * aspectRatio, -0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1, 1)
 		};
-		DWORD indices[] = {
-			0, 1, 2,
-			0, 2, 3
-		};
-		D3D11_BUFFER_DESC indexBufferDesc = { 0 };
-		indexBufferDesc.ByteWidth = sizeof(indices) * ARRAYSIZE(indices);
-		indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-		D3D11_SUBRESOURCE_DATA indexSubData = { indices, 0, 0 };
-		this->gfx->d3dDevice.Get()->CreateBuffer(&indexBufferDesc, &indexSubData, this->indexBuffer.GetAddressOf());
-		D3D11_BUFFER_DESC bd = { 0 };
-		bd.ByteWidth = sizeof(Vertex) * ARRAYSIZE(OurVertices);
-		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		D3D11_SUBRESOURCE_DATA srd = { OurVertices, 0, 0 };
-		this->gfx->d3dDevice->CreateBuffer(&bd, &srd, this->vertexBuffer.GetAddressOf());
+		Graphics::CreateVertexBuffer(vertexBuffer, vertices, ARRAYSIZE(vertices));
+		Graphics::CreateIndexBuffer(indexBuffer);
+		Graphics::CreateConstantBuffer<Graphics::Constants>(constantBuffer);
 		this->enemyAttack = this->spriteLoader->LoadFromDir(attackDir, width, height);
 		this->enemyMoving = this->spriteLoader->LoadFromDir(moveDir, width, height);
 		this->enemyIdle = this->spriteLoader->LoadFromDir(idleDir, width, height);
 		this->enemyDead = this->spriteLoader->LoadFromDir(deadDir, width, height);
 		this->isSpawning = true;
-		states = Spawn;
 	}
 	void Render() {
+		Graphics::SetConstantValues<Graphics::Constants>(constantBuffer.Get(), {
+			XMFLOAT2{ (this->GetPosition().x - Graphics::GetEyeDistance().x) / Structures::Window::GetWidth(), 
+			(this->GetPosition().y - Graphics::GetEyeDistance().y) / Structures::Window::GetHeight() },
+			XMFLOAT2{ 0, 0 }, XMFLOAT4{ (this->facingRight) ? -1.0f : 1.0f, 0, 0, 0} });
 		if (this->moving) this->currentFrame = this->enemyMoving[(this->frame / 24) % 2];
 		if (this->attacking) {
 			if (this->hitFrame < 81) {
@@ -120,21 +107,12 @@ public:
 	bool damageEnabled = true, isDead;
 	bool facingRight = false;
 	bool isSpawning = false;
-	enum EnemyStates {
-		Spawn,
-		Idle,
-		Attacking,
-		Following,
-		Dead
-	};
 	Math::float2 GetPosition() {
 		return position;
 	}
-	EnemyStates states;
 private:
 	Math::float2 characterPosition;
 	Math::float2 position = {2000, -100};
-	Graphics* gfx;
 	std::vector<ID3D11ShaderResourceView*> enemyAttack;
 	std::vector<ID3D11ShaderResourceView*> enemyMoving;
 	std::vector<ID3D11ShaderResourceView*> enemyIdle;
