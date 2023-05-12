@@ -5,11 +5,10 @@
 std::string SaveSystem::fileName;
 std::fstream SaveSystem::currentFile;
 
-void GameController::Load(Sprite* sprite) {
-    spriteLoader = sprite;
-    enemies.push_back(std::make_unique<Enemy>("EnemyAttackFrames", "EnemyMovingFrames", "EnemyIdleFrames", "EnemyDeadFrames", 152, 148, spriteLoader));
-    character = std::make_unique<Character>("IdleAnimFrames", "WalkingAnimFrames", "HitAnimFrames", "DashAnimFrames", 192, 138, spriteLoader);
-    Menu = std::make_unique<MainMenu>(spriteLoader);
+void GameController::Load() {
+    enemies.push_back(std::make_unique<Enemy>("EnemyAttackFrames", "EnemyMovingFrames", "EnemyIdleFrames", "EnemyDeadFrames", 152, 148));
+    character = std::make_unique<Character>("IdleAnimFrames", "WalkingAnimFrames", "HitAnimFrames", "DashAnimFrames", 192, 138);
+    Menu = std::make_unique<MainMenu>();
     states = mainMenu;
 }
 
@@ -34,24 +33,19 @@ void GameController::Update(HWND windowHandle, MSG msg) {
         if (duration.count() > 150) {
             for (int i = 0; i < enemies.size(); i++) {
                 enemies[i]->Update(character->GetPosition());
-                if (spriteLoader->CheckCollision(character.get(), enemies[i].get())) {
+                if (Sprite::CheckCollision(character.get(), enemies[i].get())) {
                     if (character.get()->GetStateMachine().equals("Dash")) {
                         enemies[i]->health = 0;
                     }
                     if (character.get()->GetStateMachine().equals("Attack")) {
                         enemies[i]->health -= 10;
                     }
-                    else if (enemies[i]->attacking && enemies[i].get()->damageEnabled){
-                        character->SetHealth(character->GetHealth() - 10);
-                        enemies[i].get()->damageEnabled = false;
-                    }
                 }
-                if (enemies[i].get()->isDead) enemies.erase(enemies.begin() + i);  
             }
             character->Update();
         }
         }
-        if (StateMachine::isKeyPressed(VK_ESCAPE)) {
+        if (BaseStateMachine::isKeyPressed(VK_ESCAPE)) {
             states = mainMenu;
             Menu->bGameRunning = false;
         break;
@@ -74,16 +68,7 @@ void GameController::Render() {
         character->Render();
         Graphics::d3dDeviceContext->PSSetShader(Graphics::pixelShader.Get(), nullptr, 0);
         for (int i = 0; i < enemies.size(); i++){
-            if (!enemies[i]->isDead){
-                enemies[i].get()->Render();
-                Graphics::d3dDeviceContext->PSSetConstantBuffers(0, 1, enemies[i]->constantBuffer.GetAddressOf());
-                Graphics::d3dDeviceContext->VSSetConstantBuffers(0, 1, enemies[i]->constantBuffer.GetAddressOf());
-                Graphics::d3dDeviceContext->IASetIndexBuffer(enemies[i]->indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-                Graphics::d3dDeviceContext->IASetVertexBuffers(0, 1, enemies[i]->vertexBuffer.GetAddressOf(), &Graphics::stride,
-                    &Graphics::offset);
-                Graphics::d3dDeviceContext->PSSetShaderResources(0, 1, &enemies[i]->currentFrame);
-                Graphics::d3dDeviceContext->DrawIndexed(6, 0, 0);
-            }
+            enemies[i].get()->Render();
         }
         Graphics::End();
         break;

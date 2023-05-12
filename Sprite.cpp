@@ -2,6 +2,8 @@
 #include "Character.h"
 #include "Enemy.h"
 
+IWICImagingFactory* Sprite::factory;
+
 ID3D11ShaderResourceView* Sprite::LoadTexture(
 	PCWSTR uri,
 	UINT destinationWidth,
@@ -92,13 +94,13 @@ ID3D11ShaderResourceView* Sprite::LoadTexture(
 	data.pSysMem = buffer.data();
 	data.SysMemPitch = destinationWidth * 4;
 	ID3D11Texture2D* texture;
-	hr = gfx->d3dDevice->CreateTexture2D(&textureDesc, &data, &texture);
+	hr = Graphics::d3dDevice->CreateTexture2D(&textureDesc, &data, &texture);
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = textureDesc.Format;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
 	ID3D11ShaderResourceView* srv;
-	gfx->d3dDevice->CreateShaderResourceView(texture, &srvDesc, &srv);
+	Graphics::d3dDevice->CreateShaderResourceView(texture, &srvDesc, &srv);
 	return srv;
 	srv->Release();
 	texture->Release();
@@ -170,12 +172,12 @@ ID2D1Bitmap* Sprite::LoadSprite(
 		}
 
 		if (SUCCEEDED(hr)) {
-			hr = gfx->GetRenderTarget()->CreateBitmapFromWicBitmap(pScaler, NULL, &ppBitmap);
+			hr = Graphics::GetRenderTarget()->CreateBitmapFromWicBitmap(pScaler, NULL, &ppBitmap);
 		}
 	}
 	else {
 		if (SUCCEEDED(hr)) {
-			hr = gfx->GetRenderTarget()->CreateBitmapFromWicBitmap(pConverter, NULL, &ppBitmap);
+			hr = Graphics::GetRenderTarget()->CreateBitmapFromWicBitmap(pConverter, NULL, &ppBitmap);
 		}
 	}
 	if (pDecoder) pDecoder->Release();

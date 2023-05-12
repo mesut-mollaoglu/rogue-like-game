@@ -35,14 +35,14 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	windowHandle = CreateWindowEx(WS_EX_OVERLAPPEDWINDOW, L"ClassName", L"Rogue Like Game", WS_OVERLAPPEDWINDOW, 100, 100, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, hInstance, nullptr);
 	graphics = new Graphics();
 	controller = new GameController();
-	spriteLoader = new Sprite();
 	if (!graphics->InitGraphics(windowHandle)) {
 		delete graphics;
 		return -1;
 	}
-	spriteLoader->Init(graphics);
 	ShowWindow(windowHandle, nCmdShow);
-	controller->Load(spriteLoader);
+	controller->Load();
+	SaveSystem::FileInit("Character.txt");
+	controller->character->StringToPosition();
 	Structures::Window::message.message = WM_NULL;
 	while (Structures::Window::message.message != WM_QUIT) {
 		if (PeekMessage(&Structures::Window::message, NULL, 0, 0, PM_REMOVE)) {
@@ -52,6 +52,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 		else {
 			controller->Render();
 			controller->Update(windowHandle, Structures::Window::message);
+			if (BaseStateMachine::isKeyPressed('Q')) {
+				controller->character->SaveCharacterData();
+			}
 		}
 	}
 	SaveSystem::Exit();

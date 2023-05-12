@@ -11,6 +11,9 @@
 #if defined sqrt
 #undef sqrt
 #endif 
+#ifndef PI
+#define PI 3.14159265f
+#endif
 
 class Math {
 public:
@@ -82,14 +85,20 @@ public:
         std::string toString() {
             return std::to_string(x) + " " + std::to_string(y);
         }
-        float2 toFloat(const std::string& data) {
+        static float2 toFloat(const std::string& data) {
+            Math::float2 ret;
             std::stringstream ss(data);
             std::string m_x, m_y;
             ss >> m_x;
             ss >> m_y;
-            x = atoi(m_x.c_str());
-            y = atoi(m_y.c_str());
+            ret.x = atoi(m_x.c_str());
+            ret.y = atoi(m_y.c_str());
+            return ret;
         }
+        static const float2 up;
+        static const float2 down;
+        static const float2 right;
+        static const float2 left;
     }float2;
     typedef struct float3 {
         float x;
@@ -161,6 +170,10 @@ public:
             z /= GetLength();
         }
     }float3;
+    const Math::float2 up = Math::float2(0, 1);
+    const Math::float2 down = Math::float2(0, -1);
+    const Math::float2 right = Math::float2(1, 0);
+    const Math::float2 left = Math::float2(-1, 0);
     static Math::float2 F3ToF2(Math::float3 vec3) {
         return {vec3.x, vec3.y};
     }

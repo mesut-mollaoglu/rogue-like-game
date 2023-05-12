@@ -15,6 +15,7 @@
 #include <utility>
 #include "Math.h"
 #include <initializer_list>
+#include <memory>
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;

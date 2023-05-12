@@ -4,13 +4,13 @@
 
 class MainMenu {
 public:
-	MainMenu(Sprite* sprite):spriteLoader(sprite){
-		background = spriteLoader->LoadSprite(L"MenuContent\\main menu.png", 160, 90, this->background.Get());
-		exitButton = spriteLoader->LoadSprite(L"MenuContent\\exit.png", 26, 13, this->exitButton.Get());
-		playButton = spriteLoader->LoadSprite(L"MenuContent\\start.png", 34, 13, this->playButton.Get());
-		settingsButton = spriteLoader->LoadSprite(L"MenuContent\\settings.png", 46, 13, this->settingsButton.Get());
-		creditsButton = spriteLoader->LoadSprite(L"MenuContent\\credits.png", 40, 13, this->creditsButton.Get());
-		credits = spriteLoader->LoadSprite(L"MenuContent\\credits_screen.png", 160, 90, this->credits.Get());
+	MainMenu(){
+		background = Sprite::LoadSprite(L"MenuContent\\main menu.png", 160, 90, this->background.Get());
+		exitButton = Sprite::LoadSprite(L"MenuContent\\exit.png", 26, 13, this->exitButton.Get());
+		playButton = Sprite::LoadSprite(L"MenuContent\\start.png", 34, 13, this->playButton.Get());
+		settingsButton = Sprite::LoadSprite(L"MenuContent\\settings.png", 46, 13, this->settingsButton.Get());
+		creditsButton = Sprite::LoadSprite(L"MenuContent\\credits.png", 40, 13, this->creditsButton.Get());
+		credits = Sprite::LoadSprite(L"MenuContent\\credits_screen.png", 160, 90, this->credits.Get());
 		menuStates = main;
 		Vsync = new Button<bool>(Structures::Window::GetWidth() / 2 - 250, 200, 500, 20, nullptr, L"VSYNC: ");
 		Play = new Button<bool>(horizontalPos(playButton.Get()), 320, 238, 91, playButton.Get());
@@ -107,5 +107,4 @@ private:
 	ComPtr<ID2D1Bitmap> settingsButton;
 	ComPtr<ID2D1Bitmap> creditsButton;
 	ComPtr<ID2D1Bitmap> credits;
-	Sprite* spriteLoader;
 };

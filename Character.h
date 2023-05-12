@@ -1,14 +1,15 @@
 #pragma once
 
 #include "SaveSystem.h"
+#include <set>
 
 class Character {
 public:
     ComPtr<ID3D11Buffer> vertexBuffer;
     ComPtr<ID3D11Buffer> indexBuffer;
     ComPtr<ID3D11Buffer> constantBuffer;
-    Character(const char* idleFrames, const char* walkingFrames, const char* hitFrames, const char* dashFrames, float nWidth, float nHeight, Sprite* spriteLoader)
-        : width(nWidth), height(nHeight), sprite(spriteLoader) {
+    Character(const char* idleFrames, const char* walkingFrames, const char* hitFrames, const char* dashFrames, float nWidth, float nHeight)
+        : width(nWidth), height(nHeight) {
         float aspectRatio = (float)width / (float)height;
         Graphics::Vertex vertices[] =
         {
@@ -20,39 +21,33 @@ public:
         Graphics::CreateVertexBuffer(vertexBuffer, vertices, ARRAYSIZE(vertices));
         Graphics::CreateIndexBuffer(indexBuffer);
         Graphics::CreateConstantBuffer<Graphics::Constants>(constantBuffer);
-        stateMachine.AddState(walking, new Animator(sprite->LoadFromDir(walkingFrames, nWidth, nHeight), 250), "Walking", {'W', 'A', 'S', 'D'});
-        stateMachine.AddState(idle, new Animator(sprite->LoadFromDir(idleFrames, nWidth, nHeight), 250), "Idle", {});
-        stateMachine.AddState(dash, new Animator(sprite->LoadFromDir(dashFrames, nWidth, nHeight), 50, true), "Dash", {VK_SHIFT}, 2500);
-        stateMachine.AddState(attack, new Animator(sprite->LoadFromDir(hitFrames, nWidth, nHeight), 125, true), "Attack", {VK_LBUTTON});
+        stateMachine.AddState(walking, new Animator(Sprite::LoadFromDir(walkingFrames, nWidth, nHeight), 250), "Walking", { 'W', 'A', 'S', 'D' });
+        stateMachine.AddState(idle, new Animator(Sprite::LoadFromDir(idleFrames, nWidth, nHeight), 250), "Idle", {});
+        stateMachine.AddState(dash, new Animator(Sprite::LoadFromDir(dashFrames, nWidth, nHeight), 50, true), "Dash", { VK_SHIFT }, 2000);
+        stateMachine.AddState(attack, new Animator(Sprite::LoadFromDir(hitFrames, nWidth, nHeight), 125, true), "Attack", { VK_LBUTTON });
         stateMachine.SetState("Idle");
-        SaveSystem::FileInit("Character.txt");
-        StringToPosition();
     }
     std::function<void()> walking = [&, this]() {
         states = States::LoadDash;
-        if (StateMachine::isKeyPressed('A')) {
+        if (BaseStateMachine::isKeyPressed('A')) {
             if (!stateMachine.equals("Dash") && !facingRight) { Flip(); }
             position -= {speed, 0};
         }
-        if (StateMachine::isKeyPressed('D')) {
+        if (BaseStateMachine::isKeyPressed('D')) {
             if (!stateMachine.equals("Dash") && facingRight) { Flip(); }
             position += {speed, 0};
         }
-        if (StateMachine::isKeyPressed('W')) {
+        if (BaseStateMachine::isKeyPressed('W')) {
             position += {0, speed};
         }
-        if (StateMachine::isKeyPressed('S')) {
+        if (BaseStateMachine::isKeyPressed('S')) {
             position -= {0, speed};
         }
-        if (!SaveSystem::isCurrentFile("Character.txt"))
-            SaveSystem::FileInit("Character.txt");
-        SaveSystem::DeleteLine(1);
-        this->PositionToString();
     };
     std::function<void()> dash = [&, this]() {
         switch (states) {
         case States::LoadDash: {
-            Math::float2 mousePos = StateMachine::ToScreenCoord(StateMachine::GetMousePos());
+            Math::float2 mousePos = BaseStateMachine::ToScreenCoord(BaseStateMachine::GetMousePos());
             angle = Math::GetAngle(position, mousePos);
             distance = position.GetDistance(mousePos);
             distance = Math::smoothstep(0.0f, 3.0f, distance);
@@ -100,10 +95,16 @@ public:
     void SetPosition(Math::float2 pos) {
         this->position = pos;
     }
+    void SaveCharacterData() {
+        if (!SaveSystem::isCurrentFile("Character.txt"))
+            SaveSystem::FileInit("Character.txt");
+        SaveSystem::DeleteLine(1);
+        this->PositionToString();
+    }
     void StringToPosition() {
         if (!SaveSystem::isCurrentFile("Character.txt")) return;
-        std::string data = SaveSystem::ReadData();
-        this->position.toFloat(data);
+        std::string data = SaveSystem::ReadLine();
+        this->position = Math::float2::toFloat(data);
     }
     void PositionToString() {
         SaveSystem::WriteData(this->position.toString(), true);
@@ -127,5 +128,4 @@ private:
     }
     float speed = 10.0f;
     StateMachine stateMachine;
-    Sprite* sprite;
 };

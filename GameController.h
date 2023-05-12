@@ -8,8 +8,6 @@
 using namespace DirectX;
 
 class GameController {
-protected:
-	Sprite* spriteLoader;
 public:
 	enum State {
 		mainMenu,
@@ -24,7 +22,7 @@ public:
 	std::chrono::time_point<std::chrono::steady_clock> now;
 	std::chrono::milliseconds duration;
 	bool bInit = false;
-	void Load(Sprite* sprite);
+	void Load();
 	void Unload();
 	void Update(HWND windowHandle, MSG msg);
 	void Render();

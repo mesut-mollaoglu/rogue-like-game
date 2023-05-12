@@ -3,22 +3,21 @@
 
 class SaveSystem {
 public:
-	SaveSystem();
-	virtual ~SaveSystem() {
-
-	}
 	static void WriteData(std::string data, bool lineBreak = false, size_t lineNumber = -1) {
+		if (!SaveSystem::currentFile.is_open()) return;
 		if (lineNumber != -1) SaveSystem::GotoLine(currentFile, lineNumber);
 		if(!lineBreak) SaveSystem::currentFile << data;
 		else SaveSystem::currentFile << data << '\n';
 	}
 	static std::string ReadLine(size_t lineNumber = -1) {
+		if (!SaveSystem::currentFile.is_open()) return "";
 		std::string str;
 		if (lineNumber != -1) SaveSystem::GotoLine(SaveSystem::currentFile, lineNumber);
 		std::getline(SaveSystem::currentFile, str);
 		return str;
 	}
 	static std::string ReadData(size_t lineNumber = -1) {
+		if (!SaveSystem::currentFile.is_open()) return "";
 		std::string str;
 		if (lineNumber != -1) SaveSystem::GotoLine(SaveSystem::currentFile, lineNumber);
 		SaveSystem::currentFile >> str;
@@ -38,7 +37,6 @@ public:
 	static void Exit() {
 		if (currentFile.is_open()) currentFile.close();
 	}
-	static std::fstream currentFile;
 	static const char* GetFileName() {
 		return SaveSystem::fileName.c_str();
 	}
@@ -71,7 +69,8 @@ public:
 		return SaveSystem::currentFile.peek() == std::ifstream::traits_type::eof();
 	}
 	static bool isCurrentFile(std::string file) {
-		return strcmp(file.c_str(), fileName.c_str()) == 0;
+		return strcmp(file.c_str(), GetFileName()) == 0;
 	}
 	static std::string fileName;
+	static std::fstream currentFile;
 };
