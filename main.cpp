@@ -42,7 +42,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	ShowWindow(windowHandle, nCmdShow);
 	controller->Load();
 	SaveSystem::FileInit("Character.txt");
-	controller->character->StringToPosition();
 	Structures::Window::message.message = WM_NULL;
 	while (Structures::Window::message.message != WM_QUIT) {
 		if (PeekMessage(&Structures::Window::message, NULL, 0, 0, PM_REMOVE)) {
@@ -51,10 +50,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 		}
 		else {
 			controller->Render();
-			controller->Update(windowHandle, Structures::Window::message);
-			if (BaseStateMachine::isKeyPressed('Q')) {
-				controller->character->SaveCharacterData();
-			}
+			controller->Update();
 		}
 	}
 	SaveSystem::Exit();

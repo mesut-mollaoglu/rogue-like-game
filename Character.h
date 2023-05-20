@@ -1,48 +1,37 @@
 #pragma once
 
-#include "SaveSystem.h"
+#include "Primitives.h"
 #include <set>
 
 class Character {
 public:
-    ComPtr<ID3D11Buffer> vertexBuffer;
-    ComPtr<ID3D11Buffer> indexBuffer;
-    ComPtr<ID3D11Buffer> constantBuffer;
     Character(const char* idleFrames, const char* walkingFrames, const char* hitFrames, const char* dashFrames, float nWidth, float nHeight)
         : width(nWidth), height(nHeight) {
-        float aspectRatio = (float)width / (float)height;
-        Graphics::Vertex vertices[] =
-        {
-            XMFLOAT2(-0.650 * aspectRatio, -0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0, 1),
-            XMFLOAT2(-0.650 * aspectRatio, 0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0, 0),
-            XMFLOAT2(0.650 * aspectRatio, 0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1, 0),
-            XMFLOAT2(0.650 * aspectRatio, -0.5), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1, 1)
-        };
-        Graphics::CreateVertexBuffer(vertexBuffer, vertices, ARRAYSIZE(vertices));
-        Graphics::CreateIndexBuffer(indexBuffer);
-        Graphics::CreateConstantBuffer<Graphics::Constants>(constantBuffer);
         stateMachine.AddState(walking, new Animator(Sprite::LoadFromDir(walkingFrames, nWidth, nHeight), 250), "Walking", { 'W', 'A', 'S', 'D' });
+        MapKeyBoard();
         stateMachine.AddState(idle, new Animator(Sprite::LoadFromDir(idleFrames, nWidth, nHeight), 250), "Idle", {});
         stateMachine.AddState(dash, new Animator(Sprite::LoadFromDir(dashFrames, nWidth, nHeight), 50, true), "Dash", { VK_SHIFT }, 2000);
         stateMachine.AddState(attack, new Animator(Sprite::LoadFromDir(hitFrames, nWidth, nHeight), 125, true), "Attack", { VK_LBUTTON });
         stateMachine.SetState("Idle");
+        StringToPosition();
+        rect = new PrimitiveShapes::TexturedRect();
+    }
+    void MapKeyBoard() {
+        vKeyMap.push_back(std::make_pair(stateMachine.states[0].activationKeys[0], Math::float2(0, 1)));
+        vKeyMap.push_back(std::make_pair(stateMachine.states[0].activationKeys[1], Math::float2(-1, 0)));
+        vKeyMap.push_back(std::make_pair(stateMachine.states[0].activationKeys[2], Math::float2(0, -1)));
+        vKeyMap.push_back(std::make_pair(stateMachine.states[0].activationKeys[3], Math::float2(1, 0)));
     }
     std::function<void()> walking = [&, this]() {
         states = States::LoadDash;
-        if (BaseStateMachine::isKeyPressed('A')) {
-            if (!stateMachine.equals("Dash") && !facingRight) { Flip(); }
-            position -= {speed, 0};
-        }
-        if (BaseStateMachine::isKeyPressed('D')) {
-            if (!stateMachine.equals("Dash") && facingRight) { Flip(); }
-            position += {speed, 0};
-        }
-        if (BaseStateMachine::isKeyPressed('W')) {
-            position += {0, speed};
-        }
-        if (BaseStateMachine::isKeyPressed('S')) {
-            position -= {0, speed};
-        }
+        for (auto& p : vKeyMap)
+            if (p.first.isPressed()) {
+                position += p.second * speed;
+                if (p.second.x == -1 && !facingRight)
+                    Flip();
+                else if (p.second.x == 1 && facingRight)
+                    Flip();
+            }
     };
     std::function<void()> dash = [&, this]() {
         switch (states) {
@@ -62,26 +51,20 @@ public:
         }
     };
     std::function<void()> idle = [&, this]() {
-        states = States::LoadDash; 
+        states = States::LoadDash;
     };
     std::function<void()> attack = [&, this]() {
-        states = States::LoadDash; 
+        states = States::LoadDash;
     };
     void Update() {
-        Graphics::SetEyePosition(Math::float3(0, 0, 5));
+        if (BaseStateMachine::isKeyPressed('Q'))
+        {
+            SaveCharacterData();
+        }
         stateMachine.UpdateState();
     }
     void Render() {
-        Graphics::SetConstantValues<Graphics::Constants>(this->constantBuffer.Get(), { XMFLOAT2{(this->GetPosition().x - Graphics::GetEyeDistance().x) / Structures::Window::GetWidth(),
-            (this->GetPosition().y - Graphics::GetEyeDistance().y) / Structures::Window::GetHeight()}, XMFLOAT2{0, 0}, XMFLOAT4{(this->facingRight) ? -1.0f : 1.0f, 0, 0, 0} });
-        ID3D11ShaderResourceView* currentFrame = stateMachine.RenderState();
-        Graphics::d3dDeviceContext->VSSetConstantBuffers(0, 1, constantBuffer.GetAddressOf()); 
-        Graphics::d3dDeviceContext->PSSetConstantBuffers(0, 1, constantBuffer.GetAddressOf());
-        Graphics::d3dDeviceContext->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-        Graphics::d3dDeviceContext->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &Graphics::stride,
-            &Graphics::offset);
-        Graphics::d3dDeviceContext->PSSetShaderResources(0, 1, &currentFrame);
-        Graphics::d3dDeviceContext->DrawIndexed(6, 0, 0);
+        rect->Draw(stateMachine.RenderState(), GetPosition(), facingRight ? PrimitiveShapes::FlipHorizontal::FlippedHorizontal : PrimitiveShapes::FlipHorizontal::NormalHorizontal);
     }
     Math::float2 GetPosition() {
         return position;
@@ -121,6 +104,7 @@ public:
     }
 private:
     Math::float2 position;
+    std::vector<std::pair<BaseStateMachine::Key, Math::float2>> vKeyMap;
     float health = 100.0f;
     float distance = 0.0f, angle = 0.0f;
     void Flip() {
@@ -128,4 +112,5 @@ private:
     }
     float speed = 10.0f;
     StateMachine stateMachine;
+    PrimitiveShapes::TexturedRect* rect;
 };

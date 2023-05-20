@@ -1,7 +1,8 @@
 cbuffer constants : register(b0)
 {
     float2 offset;
-    float4 horizontalScale;
+    float2 flipScale;
+    float4 fColor;
 };
 
 cbuffer proj : register(b1)
@@ -29,7 +30,7 @@ VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
     float4x4 worldViewProj = mul(world, mul(view, proj));
-    output.outPosition = mul(float4(input.inPos.x * horizontalScale.x, input.inPos.y, 0.0f, 1.0f), worldViewProj);
+    output.outPosition = mul(float4(input.inPos.x * flipScale.x, input.inPos.y * flipScale.y, 0.0f, 1.0f), worldViewProj);
     output.outPosition += float4(offset, 0.0f, 0.0f);
     output.outColor = input.inColor;
     output.outTexCoord = input.inTexCoord;

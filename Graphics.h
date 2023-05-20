@@ -97,15 +97,9 @@ public:
 	typedef struct Constants
 	{
 		XMFLOAT2 pos;
-		XMFLOAT2 cameraPos;
-		XMFLOAT4 horizontalScale;
+		XMFLOAT2 flipScale;
+		XMFLOAT4 fColor;
 	}Constants;
-	typedef struct CollisionConstants
-	{
-		XMFLOAT2 pos;
-		XMFLOAT2 paddingUnused;
-		XMFLOAT4 collisionValues;
-	}CollisionConstants;
 	typedef struct ProjectionBuffer
 	{
 		XMMATRIX proj;

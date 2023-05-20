@@ -13,6 +13,7 @@ class Character;
 
 class Sprite {
 public:
+	static ID3D11ShaderResourceView* sNullShaderResource;
 	static ID3D11ShaderResourceView* LoadTexture(
 		PCWSTR uri,
 		UINT destinationWidth,

@@ -8,15 +8,16 @@ struct TextureSize {
 
 cbuffer constants : register(b0) {
     float2 offset;
-    float4 horizontalScale;
+    float2 flipScale;
+    float4 fColor;
 }
 
 float4 main(float2 texcoord : TEXCOORD, float4 color : COLOR) : SV_TARGET{
+    if (length(fColor.rgb - float3(0, 0, 0)) != 0) return float4(fColor.rgb, 1.0);
     TextureSize texSize;
     texSize.width = 152;
-    texSize.height = 148;
-    float2 uv = float2(texcoord.x * horizontalScale.x + 0.5, 0.5 - texcoord.y);
-    uv.x -= horizontalScale.x * offset.x;
+    float2 uv = float2(texcoord.x * flipScale.x + 0.5, 0.5 - texcoord.y * flipScale.y);
+    uv.x -= flipScale.x * offset.x;
     uv.y += offset.y;
     float2 newUV = floor(uv * texSize.width * 0.75) / (texSize.width * 0.75);
     float4 val = tex.Sample(samplerState, newUV);

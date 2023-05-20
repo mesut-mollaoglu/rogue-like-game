@@ -211,3 +211,18 @@ public:
 		}
 	}
 };
+
+class Level {
+public:
+	uint32_t ticks = 75;
+	enum class ManageLevel {
+		CurrentLevel,
+		PrevLevel,
+		NextLevel
+	} nLevel = ManageLevel::CurrentLevel;
+	virtual void Render() = 0;
+	virtual void FixedUpdate() = 0;
+	virtual void Update() = 0;
+	virtual void Load() = 0;
+	virtual void UnLoad() = 0;
+};

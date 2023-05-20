@@ -3,6 +3,7 @@
 #include "Enemy.h"
 
 IWICImagingFactory* Sprite::factory;
+ID3D11ShaderResourceView* Sprite::sNullShaderResource = {nullptr};
 
 ID3D11ShaderResourceView* Sprite::LoadTexture(
 	PCWSTR uri,
