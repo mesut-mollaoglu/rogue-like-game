@@ -27,7 +27,7 @@ public:
 		Primitive() = default;
 		Primitive(uint32_t shapeIndex, Structures::Color color) {
 			nIndex = shapeIndex;
-			fColor = color;
+			fColor = color.Normalize();
 		}
 		void AddPoint(Structures::Color fColor, Math::float2 fPos) {
 			vData.push_back(Graphics::Vertex{ XMFLOAT2(fPos.x, fPos.y), XMFLOAT4(fColor.r, fColor.g, fColor.a, fColor.a), XMFLOAT2(1, 1) });
