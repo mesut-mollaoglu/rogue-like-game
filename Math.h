@@ -17,148 +17,149 @@
 
 class Math {
 public:
-    typedef struct float2 {
-        float x;
-        float y;
-        float2() = default;
-        float2(float xAxis, float yAxis) {
+    template<class T>
+    struct Vector2D {
+        T x;
+        T y;
+        Vector2D() = default;
+        Vector2D(T xAxis, T yAxis) {
             x = xAxis;
             y = yAxis;
         }
-        void operator=(float2 vec) {
+        void operator=(Vector2D<T> vec) {
             x = vec.x;
             y = vec.y;
         }
-        void operator-=(float2 vec) {
+        void operator-=(Vector2D<T> vec) {
             x -= vec.x;
             y -= vec.y;
         }
-        void operator+=(float2 vec) {
+        void operator+=(Vector2D<T> vec) {
             x += vec.x;
             y += vec.y;
         }
-        void operator*=(float k) {
+        void operator*=(T k) {
             x *= k;
             y *= k;
         }
-        float2 operator*(float k) {
-            float2 ret;
+        Vector2D<T> operator*(T k) {
+            Vector2D<T> ret;
             ret.x = x * k;
             ret.y = y * k;
             return ret;
         }
-        float2 operator+(float2 vec) {
-            float2 ret;
+        Vector2D<T> operator+(Vector2D<T> vec) {
+            Vector2D<T> ret;
             ret.x = x + vec.x;
             ret.y = y + vec.y;
             return ret;
         }
-        float2 operator-(float2 vec) {
-            float2 ret;
+        Vector2D<T> operator-(Vector2D<T> vec) {
+            Vector2D<T> ret;
             ret.x = x - vec.x;
             ret.y = y - vec.y;
             return ret;
         }
-        float GetLength() {
+        T GetLength() {
             return Math::sqrt(x * x + y * y);
         }
-        float GetLengthSq() {
+        T GetLengthSq() {
             return x * x + y * y;
         }
-        float GetDistance(float2 point) {
+        T GetDistance(Vector2D<T> point) {
             return Math::sqrt((x - point.x) * (x - point.x) + (y - point.y) * (y - point.y));
         }
-        float GetDot(float2 vec) {
+        T GetDot(Vector2D<T> vec) {
             return x * vec.x + y * vec.y;
         }
         void Normalize() {
             x /= GetLength();
             y /= GetLength();
         }
-        float2 lerp(const float2& vec, float f)
+        Vector2D<T> lerp(const Vector2D<T>& vec, T f)
         {
-            float2 ret;
-            ret.x = Math::Lerp<float>(ret.x, vec.x, f);
-            ret.y = Math::Lerp<float>(ret.y, vec.y, f);
+            Vector2D<T> ret;
+            ret.x = Math::Lerp<T>(ret.x, vec.x, f);
+            ret.y = Math::Lerp<T>(ret.y, vec.y, f);
             return ret;
         }
         std::string toString() {
             return std::to_string(x) + " " + std::to_string(y);
         }
-        static float2 toFloat(const std::string& data) {
-            Math::float2 ret;
+        static Vector2D<T> toVector(const std::string& data) {
+            Math::Vector2D<T> ret;
             std::stringstream ss(data);
             std::string m_x, m_y;
             ss >> m_x;
             ss >> m_y;
-            ret.x = atoi(m_x.c_str());
-            ret.y = atoi(m_y.c_str());
+            ret.x = static_cast<T>(atoi(m_x.c_str()));
+            ret.y = static_cast<T>(atoi(m_y.c_str()));
             return ret;
         }
-        static const float2 up;
-        static const float2 down;
-        static const float2 right;
-        static const float2 left;
-    }float2;
-    typedef struct float3 {
-        float x;
-        float y;
-        float z;
-        float3() = default;
-        float3(float xAxis, float yAxis, float zAxis) {
+    };
+    typedef Vector2D<float> float2;
+    typedef Vector2D<int32_t> int2;
+    typedef Vector2D<double> double2;
+    template <class T>
+    struct Vector3D {
+        T x;
+        T y;
+        T z;
+        Vector3D() = default;
+        Vector3D(T xAxis, T yAxis, T zAxis) {
             x = xAxis;
             y = yAxis;
             z = zAxis;
         }
-        float3(float2 vec, float zAxis) {
+        Vector3D(Vector2D<T> vec, T zAxis) {
             x = vec.x;
             y = vec.y;
             z = zAxis;
         }
-        float2 xy() {
-            return float2(x, y);
+        Vector2D<T> xy() {
+            return Vector2D<T>(x, y);
         }
-        void operator=(float3 vec) {
+        void operator=(Vector3D<T> vec) {
             x = vec.x;
             y = vec.y;
             z = vec.z;
         }
-        void operator-=(float3 vec) {
+        void operator-=(Vector3D<T> vec) {
             x -= vec.x;
             y -= vec.y;
             z -= vec.z;
         }
-        void operator+=(float3 vec) {
+        void operator+=(Vector3D<T> vec) {
             x += vec.x;
             y += vec.y;
             z += vec.z;
         }
-        void operator*=(float k) {
+        void operator*=(T k) {
             x *= k;
             y *= k;
             z *= k;
         }
-        float3 operator*(float k) {
-            float3 ret;
+        Vector3D<T> operator*(T k) {
+            Vector3D<T> ret;
             ret.x = x * k;
             ret.y = y * k;
             ret.z = z * k;
             return ret;
         }
-        float GetLength() {
+        T GetLength() {
             return Math::sqrt(x * x + y * y + z * z);
         }
-        float GetLengthSq() {
+        T GetLengthSq() {
             return x * x + y * y + z * z;
         }
-        float GetDistance(float3 point) {
+        T GetDistance(Vector3D<T> point) {
             return Math::sqrt((x - point.x) * (x - point.x) + (y - point.y) * (y - point.y) + (z - point.z) * (z - point.z));
         }
-        float GetDot(float3 vec) {
+        T GetDot(Vector3D<T> vec) {
             return x * vec.x + y * vec.y + z * vec.z;
         }
-        float3 operator-(float3 vec) {
-            float3 ret;
+        Vector3D<T> operator-(Vector3D<T> vec) {
+            Vector3D<T> ret;
             ret.x = x - vec.x;
             ret.y = y - vec.y;
             ret.z = z - vec.z;
@@ -169,11 +170,10 @@ public:
             y /= GetLength();
             z /= GetLength();
         }
-    }float3;
-    const Math::float2 up = Math::float2(0, 1);
-    const Math::float2 down = Math::float2(0, -1);
-    const Math::float2 right = Math::float2(1, 0);
-    const Math::float2 left = Math::float2(-1, 0);
+    };
+    typedef Vector3D<float> float3;
+    typedef Vector3D<int32_t> int3;
+    typedef Vector3D<double> double3;
     static Math::float2 F3ToF2(Math::float3 vec3) {
         return {vec3.x, vec3.y};
     }

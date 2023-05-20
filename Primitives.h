@@ -15,7 +15,7 @@ public:
 		ComPtr<ID3D11Buffer> vBuffer;
 		ComPtr<ID3D11Buffer> iBuffer;
 		ComPtr<ID3D11Buffer> cBuffer;
-		Math::float3 fColor;
+		Structures::Color fColor;
 		std::vector<Graphics::Vertex> vData;
 		FlipHorizontal nHorizontal = FlipHorizontal::NormalHorizontal;
 		FlipVertical nVertical = FlipVertical::NormalVertical;
@@ -25,12 +25,12 @@ public:
 		const uint32_t nVertexCount = 4;
 		const uint32_t nIndexCount = 6;
 		Primitive() = default;
-		Primitive(uint32_t shapeIndex, Math::float3 color) {
+		Primitive(uint32_t shapeIndex, Structures::Color color) {
 			nIndex = shapeIndex;
 			fColor = color;
 		}
-		void AddPoint(Math::float3 fColor, Math::float2 fPos) {
-			vData.push_back(Graphics::Vertex{ XMFLOAT2(fPos.x, fPos.y), XMFLOAT4(fColor.x, fColor.y, fColor.z, 1.0f), XMFLOAT2(1, 1) });
+		void AddPoint(Structures::Color fColor, Math::float2 fPos) {
+			vData.push_back(Graphics::Vertex{ XMFLOAT2(fPos.x, fPos.y), XMFLOAT4(fColor.r, fColor.g, fColor.a, fColor.a), XMFLOAT2(1, 1) });
 			nCount++;
 			if (nCount == nIndex) {
 				CreateIndex();
@@ -54,7 +54,7 @@ public:
 		void Draw(Math::float2 fPosition) {
 			Graphics::SetConstantValues<Graphics::Constants>(this->cBuffer.Get(), { XMFLOAT2{fPosition.x / Structures::Window::GetWidth(),
 				fPosition.y / Structures::Window::GetHeight()}, XMFLOAT2{(nHorizontal == FlipHorizontal::NormalHorizontal) ? 1.0f : -1.0f,
-				(nVertical == FlipVertical::NormalVertical) ? 1.0f : -1.0f}, XMFLOAT4{fColor.x, fColor.y, fColor.z, 0} });
+				(nVertical == FlipVertical::NormalVertical) ? 1.0f : -1.0f}, XMFLOAT4{fColor.r, fColor.g, fColor.b, fColor.a} });
 			Graphics::d3dDeviceContext->VSSetConstantBuffers(0, 1, cBuffer.GetAddressOf());
 			Graphics::d3dDeviceContext->PSSetConstantBuffers(0, 1, cBuffer.GetAddressOf());
 			Graphics::d3dDeviceContext->IASetIndexBuffer(iBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
@@ -66,16 +66,16 @@ public:
 	typedef struct Rect {
 		Primitive* pShape;
 		Rect() = default;
-		Rect(Math::float2 fSize, Math::float3 color) {
+		Rect(Math::int2 fSize, Structures::Color color) {
 			pShape = new Primitive(4, color);
 			int width = Structures::Window::GetWidth();
 			int height = Structures::Window::GetHeight();
 			float nHypo = Math::sqrt(width * width + height * height);
 			float nAspect = Graphics::GetEyeDistance().z / nHypo;
-			pShape->AddPoint(color, Math::float2(-fSize.x * nAspect, -fSize.y * nAspect));
-			pShape->AddPoint(color, Math::float2(-fSize.x * nAspect, fSize.y * nAspect));
-			pShape->AddPoint(color, Math::float2(fSize.x * nAspect, fSize.y * nAspect));
-			pShape->AddPoint(color, Math::float2(fSize.x * nAspect, -fSize.y * nAspect));
+			pShape->AddPoint(color.Normalize(), Math::float2(-fSize.x * nAspect, -fSize.y * nAspect));
+			pShape->AddPoint(color.Normalize(), Math::float2(-fSize.x * nAspect, fSize.y * nAspect));
+			pShape->AddPoint(color.Normalize(), Math::float2(fSize.x * nAspect, fSize.y * nAspect));
+			pShape->AddPoint(color.Normalize(), Math::float2(fSize.x * nAspect, -fSize.y * nAspect));
 		}
 		void Draw(Math::float2 fPos) {
 			Graphics::d3dDeviceContext->PSSetShaderResources(0, 1, &Sprite::sNullShaderResource);
@@ -85,11 +85,11 @@ public:
 	typedef struct TexturedRect {
 		Primitive* pShape;
 		TexturedRect() {
-			pShape = new Primitive(4, Math::float3());
-			pShape->AddPoint(Math::float3(0.0f, 0.0f, 0.0f), Math::float2(-1, -1));
-			pShape->AddPoint(Math::float3(0.0f, 0.0f, 0.0f), Math::float2(-1, 1));
-			pShape->AddPoint(Math::float3(0.0f, 0.0f, 0.0f), Math::float2(1, 1));
-			pShape->AddPoint(Math::float3(0.0f, 0.0f, 0.0f), Math::float2(1, -1));
+			pShape = new Primitive(4, Structures::Color());
+			pShape->AddPoint(Structures::Color(), Math::float2(-1, -1));
+			pShape->AddPoint(Structures::Color(), Math::float2(-1, 1));
+			pShape->AddPoint(Structures::Color(), Math::float2(1, 1));
+			pShape->AddPoint(Structures::Color(), Math::float2(1, -1));
 		}
 		void Draw(ID3D11ShaderResourceView* nImage, Math::float2 fPos, FlipHorizontal hFlip = FlipHorizontal::NormalHorizontal, FlipVertical vFlip = FlipVertical::NormalVertical) {
 			pShape->nHorizontal = hFlip;

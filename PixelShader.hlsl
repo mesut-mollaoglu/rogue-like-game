@@ -13,7 +13,7 @@ cbuffer constants : register(b0) {
 }
 
 float4 main(float2 texcoord : TEXCOORD, float4 color : COLOR) : SV_TARGET{
-    if (length(fColor.rgb - float3(0, 0, 0)) != 0) return float4(fColor.rgb, 1.0);
+    if (length(fColor.rgb - float3(0, 0, 0)) != 0) return fColor;
     TextureSize texSize;
     texSize.width = 152;
     float2 uv = float2(texcoord.x * flipScale.x + 0.5, 0.5 - texcoord.y * flipScale.y);

@@ -50,6 +50,26 @@ namespace Structures {
 		static XMVECTOR defaultForward;
 		static XMMATRIX rotationDefault;
 	}Camera;
+	typedef struct Color {
+		float r;
+		float g;
+		float b;
+		float a;
+		Color() = default;
+		Color(float r, float g, float b, float a) {
+			this->r = r;
+			this->g = g;
+			this->b = b;
+			this->a = a;
+		}
+		Color& Normalize() {
+			Color c;
+			c.r = r / 255;
+			c.g = g / 255;
+			c.b = b / 255;
+			return c;
+		}
+	}Color;
 };
 
 class Graphics {

@@ -87,7 +87,7 @@ public:
     void StringToPosition() {
         if (!SaveSystem::isCurrentFile("Character.txt")) return;
         std::string data = SaveSystem::ReadLine();
-        this->position = Math::float2::toFloat(data);
+        this->position = Math::float2::toVector(data);
     }
     void PositionToString() {
         SaveSystem::WriteData(this->position.toString(), true);
