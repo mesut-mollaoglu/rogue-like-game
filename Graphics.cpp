@@ -78,7 +78,9 @@ void Graphics::End()
 HRESULT Graphics::CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer, Graphics::Vertex* vertex, UINT numVertices) {
 	D3D11_BUFFER_DESC bd = { 0 };
 	bd.ByteWidth = sizeof(Graphics::Vertex) * numVertices;
+	bd.Usage = D3D11_USAGE_DYNAMIC;
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	D3D11_SUBRESOURCE_DATA srd = { vertex, 0, 0 };
 	HRESULT hr = Graphics::d3dDevice->CreateBuffer(&bd, &srd, vertexBuffer.GetAddressOf());
 	return hr;

@@ -169,6 +169,19 @@ public:
 		CopyMemory(projectionSubresource.pData, &data, sizeof(T));
 		Graphics::d3dDeviceContext->Unmap(buffer.Get(), 0);
 	}
+	static void SetVertexValues(ComPtr<ID3D11Buffer> buffer, std::vector<Graphics::Vertex> data) {
+		D3D11_MAPPED_SUBRESOURCE vSubresource;
+		Graphics::d3dDeviceContext->Map(buffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &vSubresource);
+		Graphics::Vertex* vData = (Graphics::Vertex*)vSubresource.pData;
+		for (int i = 0; i < data.size(); i++)
+		{
+			vData->pos = data[i].pos;
+			vData->color = data[i].color;
+			vData->tex = data[i].tex;
+			vData++;
+		}
+		Graphics::d3dDeviceContext->Unmap(buffer.Get(), 0);
+	}
 private:
 	ComPtr<IDXGIFactory1> dxgiFactory;
 	ComPtr<IDXGIAdapter1> adapter;

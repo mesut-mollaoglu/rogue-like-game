@@ -49,8 +49,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 			DispatchMessage(&Structures::Window::message);
 		}
 		else {
-			controller->Render();
 			controller->Update();
+			controller->Render();
 		}
 	}
 	SaveSystem::Exit();
