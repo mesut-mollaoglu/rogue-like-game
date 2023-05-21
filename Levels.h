@@ -1,6 +1,5 @@
 #pragma once
 
-#include "SaveSystem.h"
 #include "Button.h"
 #include "Enemy.h"
 #include "Character.h"
@@ -132,8 +131,10 @@ public:
 		this->ticks = 150;
 	}
 	void Load() override {
+		mRect = PrimitiveShapes::TexturedRect(-0.9);
 		enemies.push_back(std::make_unique<Enemy>("EnemyAttackFrames", "EnemyMovingFrames", "EnemyIdleFrames", "EnemyDeadFrames", 152, 148));
 		character = std::make_unique<Character>("IdleAnimFrames", "WalkingAnimFrames", "HitAnimFrames", "DashAnimFrames", 192, 138);
+		nMap = Sprite::LoadTexture(L"map.png", 3360, 1890);
 	}
 	void UnLoad() override {
 
@@ -158,6 +159,7 @@ public:
 			Camera::projMatrix, Camera::worldMatrix, Camera::viewMatrix });
 		Graphics::Clear(0.5f, 0.5f, 0.5f, 1.0f);
 		Graphics::Begin();
+		mRect.Draw(nMap);
 		character->Render();
 		Graphics::d3dDeviceContext->PSSetShader(Graphics::pixelShader.Get(), nullptr, 0);
 		for (int i = 0; i < enemies.size(); i++) {
@@ -171,4 +173,6 @@ public:
 private:
 	std::vector<std::unique_ptr<Enemy>> enemies;
 	std::unique_ptr<Character> character;
+	ID3D11ShaderResourceView* nMap;
+	PrimitiveShapes::TexturedRect mRect;
 };

@@ -14,15 +14,13 @@ cbuffer proj : register(b1)
 
 struct VS_INPUT
 {
-    float2 inPos : POSITION;
-    float4 inColor : COLOR;
+    float3 inPos : POSITION;
     float2 inTexCoord : TEXCOORD;
 };
 
 struct VS_OUTPUT
 {
     float4 outPosition : SV_POSITION;
-    float4 outColor : COLOR;
     float2 outTexCoord : TEXCOORD;
 };
 
@@ -30,9 +28,8 @@ VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
     float4x4 worldViewProj = mul(world, mul(view, proj));
-    output.outPosition = mul(float4(input.inPos.x * flipScale.x, input.inPos.y * flipScale.y, 0.0f, 1.0f), worldViewProj);
+    output.outPosition = mul(float4(input.inPos.x * flipScale.x, input.inPos.y * flipScale.y, input.inPos.z, 1.0f), worldViewProj);
     output.outPosition += float4(offset, 0.0f, 0.0f);
-    output.outColor = input.inColor;
     output.outTexCoord = input.inTexCoord;
     return output;
 }

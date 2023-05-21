@@ -64,7 +64,8 @@ public:
         stateMachine.UpdateState();
     }
     void Render() {
-        rect->Draw(stateMachine.RenderState(), GetPosition(), facingRight ? PrimitiveShapes::FlipHorizontal::FlippedHorizontal : PrimitiveShapes::FlipHorizontal::NormalHorizontal);
+        rect->SetAttributes(GetPosition());
+        rect->Draw(stateMachine.RenderState(), facingRight ? PrimitiveShapes::FlipHorizontal::FlippedHorizontal : PrimitiveShapes::FlipHorizontal::NormalHorizontal);
     }
     Math::float2 GetPosition() {
         return position;

@@ -74,6 +74,12 @@ namespace Structures {
 
 class Graphics {
 public:
+	typedef struct Topology {
+		Topology() = default;
+		D3D11_PRIMITIVE_TOPOLOGY tDrawMode;
+		std::string sDrawMode;
+	}Topology;
+	static Topology nDrawModes[5];
 	static inline Math::float3 GetEyeDistance() {
 		return Structures::Camera::Position;
 	}
@@ -110,8 +116,7 @@ public:
 		return Graphics::dWriteFactory.Get();
 	}
 	typedef struct Vertex {
-		XMFLOAT2 pos;
-		XMFLOAT4 color;
+		XMFLOAT3 pos;
 		XMFLOAT2 tex;
 	}Vertex;
 	typedef struct Constants
@@ -176,11 +181,38 @@ public:
 		for (int i = 0; i < data.size(); i++)
 		{
 			vData->pos = data[i].pos;
-			vData->color = data[i].color;
 			vData->tex = data[i].tex;
 			vData++;
 		}
 		Graphics::d3dDeviceContext->Unmap(buffer.Get(), 0);
+	}
+	static HRESULT CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer, std::vector<Graphics::Vertex> vertex) {
+		D3D11_BUFFER_DESC bd = { 0 };
+		bd.ByteWidth = sizeof(Graphics::Vertex) * vertex.size();
+		bd.Usage = D3D11_USAGE_DYNAMIC;
+		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		HRESULT hr = Graphics::d3dDevice->CreateBuffer(&bd, nullptr, vertexBuffer.GetAddressOf());
+		SetVertexValues(vertexBuffer, vertex);
+		return hr;
+	}
+	static HRESULT CreateIndexBuffer(ComPtr<ID3D11Buffer>& indexBuffer, std::vector<DWORD> indices) {
+		D3D11_BUFFER_DESC indexBufferDesc = { 0 };
+		indexBufferDesc.ByteWidth = sizeof(DWORD) * indices.size();
+		indexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+		indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		indexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		HRESULT hr = Graphics::d3dDevice.Get()->CreateBuffer(&indexBufferDesc, nullptr, indexBuffer.GetAddressOf());
+		D3D11_MAPPED_SUBRESOURCE iSubresource;
+		Graphics::d3dDeviceContext->Map(indexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &iSubresource);
+		DWORD* iData = (DWORD*)iSubresource.pData;
+		for (int i = 0; i < indices.size(); i++)
+		{
+			*iData = indices[i];
+			iData++;
+		}
+		Graphics::d3dDeviceContext->Unmap(indexBuffer.Get(), 0);
+		return hr;
 	}
 private:
 	ComPtr<IDXGIFactory1> dxgiFactory;

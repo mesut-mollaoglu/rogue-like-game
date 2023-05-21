@@ -38,6 +38,13 @@ ComPtr<ID2D1HwndRenderTarget> Graphics::renderTarget;
 ComPtr<ID2D1SolidColorBrush> Graphics::blackColor;
 ComPtr<ID2D1SolidColorBrush> Graphics::whiteColor;
 ComPtr<ID2D1SolidColorBrush> Graphics::snowColor;
+Graphics::Topology Graphics::nDrawModes[5] = {
+			{D3D11_PRIMITIVE_TOPOLOGY_LINELIST, "LineList"},
+			{D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP, "LineStrip"},
+			{D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, "TriangleList"},
+			{D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP, "TriangleStrip"},
+			{D3D11_PRIMITIVE_TOPOLOGY_POINTLIST, "PointList"},
+};
 
 Graphics::Graphics() {
 
@@ -264,7 +271,7 @@ bool Graphics::InitGraphics(HWND hwnd) {
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 1;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 	samplerDesc.BorderColor[0] = 0.0f;
 	samplerDesc.BorderColor[1] = 0.0f;
 	samplerDesc.BorderColor[2] = 0.0f;
@@ -272,7 +279,6 @@ bool Graphics::InitGraphics(HWND hwnd) {
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 	this->d3dDevice.Get()->CreateSamplerState(&samplerDesc, samplerState.GetAddressOf());
-	D3D11_BUFFER_DESC constantBufferDesc;
 	}
 	//Direct2D initialization
 	{
@@ -293,8 +299,7 @@ bool Graphics::InitGraphics(HWND hwnd) {
 	}
 	D3D11_INPUT_ELEMENT_DESC ied[] =
 	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
 	Graphics::CreatePixelShader(L"MainPixelShader.hlsl", this->mainPixelShader);

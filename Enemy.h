@@ -20,7 +20,8 @@ public:
 	std::function<void()> Attack = [&, this]() {};
 	std::function<void()> Idle = [&, this]() {};
 	void Render() {
-		rect->Draw(stateMachine.RenderState(), position, facingRight ? PrimitiveShapes::FlipHorizontal::FlippedHorizontal : PrimitiveShapes::FlipHorizontal::NormalHorizontal);
+		rect->SetAttributes(position);
+		rect->Draw(stateMachine.RenderState(), facingRight ? PrimitiveShapes::FlipHorizontal::FlippedHorizontal : PrimitiveShapes::FlipHorizontal::NormalHorizontal);
 	}
 	void Update(Math::float2 pos) {
 		characterPosition = pos;

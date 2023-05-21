@@ -22,7 +22,7 @@ float4 GetSample(float2 texcoord, Texture2D texName) {
 }
 
 float4 main(float2 mainTexCoord : TEXCOORD0) : SV_TARGET0{
-    if (length(fColor.rgb - float3(0, 0, 0)) != 0) return fColor;
+    if (fColor.a != 0) return fColor;
     float2 mainUV = GetTexCoord(mainTexCoord, flipScale, offset, 192, 138);
     float4 res = GetSample(mainUV, tex);
     return res;

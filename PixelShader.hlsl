@@ -13,12 +13,15 @@ cbuffer constants : register(b0) {
 }
 
 float4 main(float2 texcoord : TEXCOORD, float4 color : COLOR) : SV_TARGET{
-    if (length(fColor.rgb - float3(0, 0, 0)) != 0) return fColor;
+    if (fColor.a != 0) return fColor;
     TextureSize texSize;
     texSize.width = 152;
-    float2 uv = float2(texcoord.x * flipScale.x + 0.5, 0.5 - texcoord.y * flipScale.y);
-    uv.x -= flipScale.x * offset.x;
-    uv.y += offset.y;
+    float2 texCoord = float2(texcoord.x * flipScale.x + 0.5, 0.5 - texcoord.y * flipScale.y);
+    float2 uv;
+    uv.x = texCoord.x * cos(-fColor.x) - texCoord.y * sin(-fColor.x);
+    uv.y = texCoord.x * sin(-fColor.x) + texCoord.y * cos(-fColor.x);
+    uv.x -= flipScale.x * offset.x * cos(-fColor.x);
+    uv.y += offset.y * cos(-fColor.x);
     float2 newUV = floor(uv * texSize.width * 0.75) / (texSize.width * 0.75);
     float4 val = tex.Sample(samplerState, newUV);
     float3 red = float3(0.393f, 0.769f, 0.189f);

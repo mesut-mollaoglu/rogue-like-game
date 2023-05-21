@@ -90,12 +90,20 @@ ID3D11ShaderResourceView* Sprite::LoadTexture(
 	textureDesc.SampleDesc.Quality = 0;
 	textureDesc.Usage = D3D11_USAGE_DEFAULT;
 	textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-
 	D3D11_SUBRESOURCE_DATA data = { 0 };
 	data.pSysMem = buffer.data();
 	data.SysMemPitch = destinationWidth * 4;
 	ID3D11Texture2D* texture;
 	hr = Graphics::d3dDevice->CreateTexture2D(&textureDesc, &data, &texture);
+	D3D11_MAPPED_SUBRESOURCE vSubresource;
+	Graphics::d3dDeviceContext->Map(texture, 0, D3D11_MAP_WRITE_DISCARD, 0, &vSubresource);
+	BYTE* vData = (BYTE*)vSubresource.pData;
+	for (int i = 0; i < buffer.size(); i++)
+	{
+		vData = &buffer[i];
+		vData++;
+	}
+	Graphics::d3dDeviceContext->Unmap(texture, 0);
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = textureDesc.Format;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
