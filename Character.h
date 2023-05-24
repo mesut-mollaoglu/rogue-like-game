@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Primitives.h"
-#include <set>
+#include "Engine/Primitives.h"
 
 class Character {
 public:
@@ -14,7 +13,7 @@ public:
         stateMachine.AddState(attack, new Animator(Sprite::LoadFromDir(hitFrames, nWidth, nHeight), 125, true), "Attack", { VK_LBUTTON });
         stateMachine.SetState("Idle");
         StringToPosition();
-        rect = new PrimitiveShapes::TexturedRect();
+        rect = PrimitiveShapes::TexturedRect();
     }
     void MapKeyBoard() {
         vKeyMap.push_back(std::make_pair(stateMachine.states[0].activationKeys[0], Math::float2(0, 1)));
@@ -64,8 +63,8 @@ public:
         stateMachine.UpdateState();
     }
     void Render() {
-        rect->SetAttributes(GetPosition());
-        rect->Draw(stateMachine.RenderState(), facingRight ? PrimitiveShapes::FlipHorizontal::FlippedHorizontal : PrimitiveShapes::FlipHorizontal::NormalHorizontal);
+        rect.SetAttributes(GetPosition());
+        rect.Draw(stateMachine.RenderState(), facingRight ? PrimitiveShapes::FlipHorizontal::FlippedHorizontal : PrimitiveShapes::FlipHorizontal::NormalHorizontal);
     }
     Math::float2 GetPosition() {
         return position;
@@ -113,5 +112,5 @@ private:
     }
     float speed = 10.0f;
     StateMachine stateMachine;
-    PrimitiveShapes::TexturedRect* rect;
+    PrimitiveShapes::TexturedRect rect;
 };

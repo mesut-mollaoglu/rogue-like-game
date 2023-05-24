@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Button.h"
+#include "Engine/Button.h"
 #include "Enemy.h"
 #include "Character.h"
 
@@ -131,7 +131,7 @@ public:
 		this->ticks = 150;
 	}
 	void Load() override {
-		mRect = PrimitiveShapes::TexturedRect(-0.9);
+		mRect = PrimitiveShapes::TexturedRect(-0.9f);
 		enemies.push_back(std::make_unique<Enemy>("EnemyAttackFrames", "EnemyMovingFrames", "EnemyIdleFrames", "EnemyDeadFrames", 152, 148));
 		character = std::make_unique<Character>("IdleAnimFrames", "WalkingAnimFrames", "HitAnimFrames", "DashAnimFrames", 192, 138);
 		nMap = Sprite::LoadTexture(L"map.png", 3360, 1890);
@@ -140,15 +140,13 @@ public:
 
 	}
 	void FixedUpdate() override {
-		for (int i = 0; i < enemies.size(); i++) {
-			enemies[i]->Update(character->GetPosition());
-			if (Sprite::CheckCollision(character.get(), enemies[i].get())) {
-				if (character.get()->GetStateMachine().equals("Dash")) {
-					enemies[i]->health = 0;
-				}
-				if (character.get()->GetStateMachine().equals("Attack")) {
-					enemies[i]->health -= 10;
-				}
+		for (auto &enemy : enemies) {
+			enemy->Update(character->GetPosition());
+			if (CheckCollision(character.get(), enemy.get())) {
+				if (character.get()->GetStateMachine().equals("Dash")) 
+					enemy->health = 0;
+				if (character.get()->GetStateMachine().equals("Attack")) 
+					enemy->health -= 10;
 			}
 		}
 		character->Update();
@@ -162,13 +160,18 @@ public:
 		mRect.Draw(nMap);
 		character->Render();
 		Graphics::d3dDeviceContext->PSSetShader(Graphics::pixelShader.Get(), nullptr, 0);
-		for (int i = 0; i < enemies.size(); i++) {
-			enemies[i].get()->Render();
-		}
+		for (auto &enemy : enemies)
+			enemy->Render();
 		Graphics::End();
 	}
 	void Update() override {
 
+	}
+	uint8_t CheckCollision(Character* character, Enemy* enemy) {
+		float radius = (character->width + enemy->width) * 3;
+		Math::float2 vec = character->GetPosition() - enemy->GetPosition();
+		if ((radius * radius) > (vec.GetLengthSq())) return 1;
+		return 0;
 	}
 private:
 	std::vector<std::unique_ptr<Enemy>> enemies;

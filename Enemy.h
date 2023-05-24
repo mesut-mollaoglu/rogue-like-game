@@ -1,12 +1,12 @@
 #pragma once
-#include "SaveSystem.h"
-#include "Primitives.h"
+#include "Engine/SaveSystem.h"
+#include "Engine/Primitives.h"
 
 class Enemy {
 public:
 	Enemy(const char* attackDir, const char* moveDir, const char* idleDir, const char* deadDir, int nWidth, int nHeight) :
 		width(nWidth), height(nHeight) {
-		rect = new PrimitiveShapes::TexturedRect();
+		rect = PrimitiveShapes::TexturedRect();
 		stateMachine.AddState(Follow, new Animator(Sprite::LoadFromDir(moveDir, width, height), 250), "Follow");
 		stateMachine.AddState(Idle, new Animator(Sprite::LoadFromDir(idleDir, width, height), 250), "Idle");
 		stateMachine.AddState(Attack, new Animator(Sprite::LoadFromDir(attackDir, width, height), 75, true), "Attack");
@@ -20,8 +20,8 @@ public:
 	std::function<void()> Attack = [&, this]() {};
 	std::function<void()> Idle = [&, this]() {};
 	void Render() {
-		rect->SetAttributes(position);
-		rect->Draw(stateMachine.RenderState(), facingRight ? PrimitiveShapes::FlipHorizontal::FlippedHorizontal : PrimitiveShapes::FlipHorizontal::NormalHorizontal);
+		rect.SetAttributes(position);
+		rect.Draw(stateMachine.RenderState(), facingRight ? PrimitiveShapes::FlipHorizontal::FlippedHorizontal : PrimitiveShapes::FlipHorizontal::NormalHorizontal);
 	}
 	void Update(Math::float2 pos) {
 		characterPosition = pos;
@@ -45,7 +45,7 @@ public:
 	}
 private:
 	Math::float2 characterPosition;
-	Math::float2 position = { 2000, -100 };
+	Math::float2 position = { 5000, -100 };
 	float elapsedTime = 0.0f;
 	float smoothSin(float time, float frequency, float amplitude) {
 		return amplitude * sin(2 * PI * frequency * time);
@@ -54,5 +54,5 @@ private:
 	float m_deltaTime = 1 / 100;
 	float threshold = 150.0f, speed = 4.0f;
 	AIStateMachine stateMachine;
-	PrimitiveShapes::TexturedRect* rect;
+	PrimitiveShapes::TexturedRect rect;
 };

@@ -1,7 +1,8 @@
-#include "GameController.h"
+#include "Engine/GameController.h"
 #include <stdio.h>
 #include <io.h>
 #include <fcntl.h>
+#include "Levels.h"
 #pragma warning(disable:4996)
 
 GameController* controller;
@@ -40,6 +41,10 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 		return -1;
 	}
 	ShowWindow(windowHandle, nCmdShow);
+	controller->vLevels = {
+		new MainMenu(),
+		new GameLoop()
+	};
 	controller->Load();
 	SaveSystem::FileInit("Character.txt");
 	Structures::Window::message.message = WM_NULL;
