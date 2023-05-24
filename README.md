@@ -6,6 +6,6 @@
 ![](ScreenShots/CreditsScreen.png)
 
 # In-game ScreenShots
-![](ScreenShots/CharacterIdleImage.png)
-![](ScreenShots/DashingImage.png)
-![](ScreenShots/AttackImage.png)
+![](ScreenShots/gamePlay1.png)
+![](ScreenShots/gamePlay2.png)
+![](ScreenShots/gamePlay3.png)
