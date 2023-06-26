@@ -1,7 +1,5 @@
 #pragma once
-#include "SaveSystem.h"
-#include <chrono>
-#include <string>
+#include"Primitives.h"
 
 class GameController {
 public:

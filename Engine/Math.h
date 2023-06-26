@@ -97,9 +97,9 @@ public:
             return ret;
         }
     };
-    typedef Vector2D<float> float2;
-    typedef Vector2D<int32_t> int2;
-    typedef Vector2D<double> double2;
+    typedef Vector2D<float> Vec2f;
+    typedef Vector2D<int32_t> Vec2i;
+    typedef Vector2D<double> Vec2d;
     template <class T>
     struct Vector3D {
         T x;
@@ -171,67 +171,89 @@ public:
             z /= GetLength();
         }
     };
-    typedef Vector3D<float> float3;
-    typedef Vector3D<int32_t> int3;
-    typedef Vector3D<double> double3;
-    static Math::float2 F3ToF2(Math::float3 vec3) {
-        return {vec3.x, vec3.y};
+    typedef Vector3D<float> Vec3f;
+    typedef Vector3D<int32_t> Vec3i;
+    typedef Vector3D<double> Vec3d;
+    static Math::Vec2f F3ToF2(Math::Vec3f vec3) {
+        return { vec3.x, vec3.y };
     }
     template<class T>
     static constexpr T Lerp(T a, T b, T rate) {
         return a + (b - a) * rate;
     }
-    static Math::float2 toVector(float angle) {
-        Math::float2 ret;
+    static Math::Vec2f toVector(float angle) {
+        Math::Vec2f ret;
         ret.x = cos(angle);
         ret.y = sin(angle);
         return ret;
     }
-    static float GetAngle(Math::float2 vec1, Math::float2 vec2) {
+    static float GetAngle(Math::Vec2f vec1, Math::Vec2f vec2) {
         return atan2(vec1.y - vec2.y, vec1.x - vec2.x);
     }
-    template<class R, class L>
-    const static auto& smoothstep(const R& firstEdge, const L& secondEdge, decltype(firstEdge + secondEdge) x) noexcept{
-        x = clamp((x - firstEdge) / (secondEdge - firstEdge), 0.0f, 1.0f);
-        return static_cast<decltype(x)>(x * x * (3.0f - 2.0f * x));
+    template <class T>
+    const static T smoothstep(const T& nRight, const T& nLeft, T x) noexcept {
+        x = clamp((x - nRight) / (nLeft - nRight), 0.0f, 1.0f);
+        return (x * x * (3.0f - 2.0f * x));
     }
     template<class T>
-    const static T& clamp(const T& x, const T& minValue, const T& maxValue) noexcept{
-        return static_cast<T>(min(max(x, minValue), maxValue));
-    }
-    template <class T, class U>
-    const static auto& lerp(const T& x, const U& y, const decltype(x+y)& rate) noexcept {
-        return std::forward<decltype(rate)>(smoothstep(x, y, rate));
-    }
-    template <class T, class U>
-    const static auto& min(const T& x, const U& y) noexcept {
-        typedef decltype(x + y) type;
-        return (static_cast<type>(x) < static_cast<type>(y)) ? static_cast<T>(x) : static_cast<U>(y);
-    }
-    template <class T, class U>
-    const static auto& max(const T& x, const U& y) noexcept {
-        typedef decltype(x + y) type;
-        return (static_cast<type>(x) > static_cast<type>(y)) ? static_cast<T>(x) : static_cast<U>(y);
+    const static T clamp(const T& x, const T& nMin, const T& nMax) noexcept {
+        return min(max(x, nMin), nMax);
     }
     template <class T>
-    constexpr static unsigned floor(const T& x) noexcept {
-        return (int)x;
+    const static T min(const T x, const T y) noexcept {
+        return (x < y) ? x : y;
     }
     template <class T>
-    constexpr static unsigned round(const T& x) noexcept {
-        T temp = std::forward<T>(x - floor(x));
+    const static T max(const T x, const T y) noexcept {
+        return (x > y) ? x : y;
+    }
+    template <class T>
+    constexpr static int32_t floor(const T x) noexcept {
+        return (int32_t)x;
+    }
+    template <class T>
+    constexpr static int32_t round(const T x) noexcept {
+        T temp = x - floor(x);
         return floor(x) + ((temp < abs(temp - 1)) ? 0 : 1);
     }
     template <class T>
-    const static T& abs(const T& x) noexcept {
+    const static T abs(const T x) noexcept {
         return (x < 0) ? (x * -1) : x;
     }
     constexpr static float sqrt(const float& x) noexcept {
-        typedef union u{ float f; uint32_t i; } u;
+        typedef union u { float f; uint32_t i; } u;
         u number = { x };
         number.i = 0x5f3759df - (number.i >> 1);
         number.f *= 1.5f - (x * 0.5f * number.f * number.f);
         number.f *= 1.5f - (x * 0.5f * number.f * number.f);
         return 1 / number.f;
+    }
+    template <class T, class U>
+    constexpr static auto grandTotal(const T a, const U x)
+    {
+        auto result = 1.0;
+        for (int i = 1; i <= a; i++) {
+            result *= x / i;
+        }
+        return result;
+    }
+    template <class T>
+    constexpr static T cos(const T x)
+    {
+        T result = 1;
+        for (int i = 2; i < 50; i++) {
+            if (i % 4 == 0) {
+                result += grandTotal(i, x);
+            }
+            if (i % 4 == 2) {
+                result -= grandTotal(i, x);
+            }
+        }
+        return result;
+    }
+    template <class T>
+    constexpr static T sin(const T x)
+    {
+        return cos(3.14159265359 / 2 - x);
     }
 };

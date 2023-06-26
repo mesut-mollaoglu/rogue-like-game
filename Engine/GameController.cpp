@@ -1,8 +1,5 @@
 #include "GameController.h"
 
-std::string SaveSystem::fileName;
-std::fstream SaveSystem::currentFile;
-
 void GameController::Load() {
     vLevels[nLevelIndex]->Load();
 }
@@ -27,6 +24,14 @@ void GameController::Update() {
         nLevelIndex = (nLevelIndex + 1) % vLevels.size();
         vLevels[nLevelIndex]->Load();
     }
+    else if (vLevels[nLevelIndex]->nLevel == Level::ManageLevel::GotoLevel) {
+        vLevels[nLevelIndex]->nLevel = Level::ManageLevel::CurrentLevel;
+        vLevels[nLevelIndex]->UnLoad();
+        for (std::size_t i = 0; i < vLevels.size(); i++)
+            if (!vLevels[i]->nLevelName.empty() && strcmp(vLevels[i]->sLevelName.c_str(), vLevels[nLevelIndex]->nLevelName.c_str()))
+                nLevelIndex = i;
+        vLevels[nLevelIndex]->Load();
+    }
     if (!bInit)
     {
         start = now = Clock::now();
@@ -38,7 +43,6 @@ void GameController::Update() {
         vLevels[nLevelIndex]->FixedUpdate();
     }
     vLevels[nLevelIndex]->Update();
-    Graphics::SetEyePosition(Math::float3(0, 0, 4));
 }
 
 void GameController::Render() {

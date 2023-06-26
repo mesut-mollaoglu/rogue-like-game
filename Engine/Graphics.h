@@ -1,229 +1,219 @@
-#pragma once
-#include <Windows.h>
+#include <windows.h>
 #include <d3d11_1.h>
+#pragma comment(lib,"d3d11.lib")
 #include <dxgi1_4.h>
-#include <d2d1_1.h>
-#include <dwrite_3.h>
-#include <d2d1helper.h>
-#include <wincodec.h>
 #include <d3dcompiler.h>
-#include <iostream>
-#include <DirectXMath.h>
+#pragma comment(lib, "d3dcompiler.lib")
 #include <wrl/client.h>
-#include <fstream>
-#include <vector>
-#include <utility>
-#include "Math.h"
-#include <initializer_list>
+#include <DirectXMath.h>
+#include <wincodec.h>
 #include <memory>
 
-using namespace DirectX;
+#include <SpriteFont.h>
+#include "Math.h"
+#include <assert.h>
+#include <iostream>
+#include <string>
+#include <vector>
+
+#include "stb_image.h"
+
 using Microsoft::WRL::ComPtr;
+using namespace DirectX;
+
+struct Window {
+	static float width;
+	static float height;
+	static HWND windowHandle;
+	static MSG windowMessage;
+	static WPARAM wParam;
+	static LPARAM lParam;
+	static std::wstring className;
+	static std::wstring windowName;
+};
+
+struct Camera {
+	static Math::Vec3f Position;
+	static XMMATRIX projMatrix, viewMatrix, worldMatrix;
+	static XMVECTOR eyePos;
+	static XMVECTOR lookAtPos;
+	static XMVECTOR upVector;
+	static float fovDegrees;
+	static float fovRadians;
+	static float aspectRatio;
+	static float nearZ;
+	static float farZ;
+	static XMVECTOR defaultUp;
+	static XMVECTOR defaultForward;
+	static XMMATRIX rotationDefault;
+	static ID3D11Buffer* projBuffer;
+};
 
 namespace Structures {
-	typedef struct Window {
-		static HWND windowHandle;
-		static int GetWidth() {
-			RECT rc;
-			GetClientRect(GetActiveWindow(), &rc);
-			return static_cast<int>(rc.right - rc.left);
-		}
-		static int GetHeight() {
-			RECT rc;
-			GetClientRect(GetActiveWindow(), &rc);
-			return static_cast<int>(rc.bottom - rc.top);
-		}
-		static MSG message;
-	}Window;
-	typedef struct Camera {
-		static Math::float3 Position;
-		static XMMATRIX projMatrix, viewMatrix, worldMatrix;
-		static XMVECTOR eyePos;
-		static XMVECTOR lookAtPos;
-		static XMVECTOR upVector;
-		static float fovDegrees;
-		static float fovRadians;
-		static float aspectRatio;
-		static float nearZ;
-		static float farZ;
-		static XMVECTOR defaultUp;
-		static XMVECTOR defaultForward;
-		static XMMATRIX rotationDefault;
-	}Camera;
 	typedef struct Color {
-		float r;
-		float g;
-		float b;
-		float a;
-		Color() = default;
-		Color(float r, float g, float b, float a) {
-			this->r = r;
-			this->g = g;
-			this->b = b;
-			this->a = a;
-		}
-		Color& Normalize() {
-			Color c;
-			c.r = r / 255;
-			c.g = g / 255;
-			c.b = b / 255;
-			return c;
-		}
-	}Color;
+		float r, g, b, a;
+	};
+	typedef struct Vertex {
+		float x, y, z, u, v;
+	}Vertex;
+	typedef struct Projection {
+		XMMATRIX projMatrix;
+		XMMATRIX worldMatrix;
+		XMMATRIX viewMatrix;
+	}Projection;
+	typedef struct Constants
+	{
+		Math::Vec2f pos;
+		Math::Vec2f flipScale;
+		Structures::Color color;
+	}Constants;
 };
 
 class Graphics {
 public:
 	typedef struct Topology {
-		Topology() = default;
 		D3D11_PRIMITIVE_TOPOLOGY tDrawMode;
 		std::string sDrawMode;
 	}Topology;
-	static Topology nDrawModes[5];
-	static inline Math::float3 GetEyeDistance() {
-		return Structures::Camera::Position;
+	typedef struct Format {
+		GUID wicFormat;
+		DXGI_FORMAT dxgiFormat;
+	};
+	static inline DXGI_FORMAT FindFormat(GUID guidFormat) {
+		for (Graphics::Format formats : Graphics::formatTable)
+			if (formats.wicFormat == guidFormat)
+				return formats.dxgiFormat;
 	}
-	static void SetEyePosition(Math::float3 vec) {
-		using Structures::Camera;
-		Camera::defaultUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		Camera::defaultForward = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-		Camera::rotationDefault = XMMatrixRotationRollPitchYaw(0.0f, 0.0f, 0.0f);
-		Camera::Position = vec;
-		Camera::worldMatrix = XMMatrixIdentity();
-		Camera::eyePos = XMVectorSet(0.0f, 0.0f, -Camera::Position.z, 0.0f);
-		Camera::lookAtPos = XMVector3TransformCoord(Camera::defaultForward, Camera::rotationDefault);
-		Camera::lookAtPos += Camera::eyePos;
-		Camera::upVector = XMVector3TransformCoord(Camera::defaultUp, Camera::rotationDefault);
-		Camera::viewMatrix = XMMatrixLookAtLH(Camera::eyePos, Camera::lookAtPos, Camera::upVector);
-		Camera::fovDegrees = 90.0f;
-		Camera::fovRadians = (Camera::fovDegrees / 360.0f) * XM_2PI;
-		Camera::aspectRatio = (float)Structures::Window::GetWidth() / (float)Structures::Window::GetHeight();
-		Camera::nearZ = 0.1f;
-		Camera::farZ = 100.0f; 
-		Camera::projMatrix = XMMatrixPerspectiveFovLH(Camera::fovRadians, Camera::aspectRatio, Camera::nearZ,
-			Camera::farZ);
+	static inline void SetDrawMode(std::string drawMode) {
+		for (Graphics::Topology t : Graphics::nDrawModes)
+			if (strcmp(drawMode.c_str(), t.sDrawMode.c_str()) == 0)
+				Graphics::deviceContext->IASetPrimitiveTopology(t.tDrawMode);
 	}
-	bool InitGraphics(HWND hwnd);
-	Graphics();
-	~Graphics();
-	static ID2D1RenderTarget* GetRenderTarget() {
-		return Graphics::renderTarget.Get();
-	}
-	static ID2D1Factory1* GetFactory() {
-		return Graphics::factory.Get();
-	}
-	static IDWriteFactory5* getWriteFactory() {
-		return Graphics::dWriteFactory.Get();
-	}
-	typedef struct Vertex {
-		XMFLOAT3 pos;
-		XMFLOAT2 tex;
-	}Vertex;
-	typedef struct Constants
-	{
-		XMFLOAT2 pos;
-		XMFLOAT2 flipScale;
-		XMFLOAT4 fColor;
-	}Constants;
-	typedef struct ProjectionBuffer
-	{
-		XMMATRIX proj;
-		XMMATRIX world;
-		XMMATRIX view;
-	}ProjBuffer;
-	static void Clear(float r, float g, float b, float a);
-	static void Begin();
-	static void End();
-	static HRESULT InitWritingFactory();
-	static UINT stride, offset;
-	HWND windowHandle;
-	static ComPtr<ID3D11InputLayout> inputLayout;
-	static ComPtr<ID3D11Buffer> projectionBuffer;
+	static Graphics::Format formatTable[3];
+	static Graphics::Topology nDrawModes[5];
+	static uint32_t stride;
+	static uint32_t offset;
 	static ComPtr<ID3D11SamplerState> samplerState;
-	static ComPtr<ID3D11PixelShader> mainPixelShader;
-	static ComPtr<ID3D11PixelShader> pixelShader;
+    static ComPtr<ID3D11Device1> device;
+    static ComPtr<ID3D11DeviceContext1> deviceContext;
+	static ComPtr<IDXGISwapChain1> swapChain;
+	static ComPtr<ID3D11RenderTargetView> renderTarget;
 	static ComPtr<ID3D11VertexShader> vertexShader;
-	static ComPtr<ID2D1SolidColorBrush> blackColor;
-	static ComPtr<ID2D1SolidColorBrush> whiteColor;
-	static ComPtr<ID2D1SolidColorBrush> snowColor;
-	static void DrawTextF(std::wstring text, float x, float y, float width, float height, ID2D1Brush* color);
-	static ComPtr<ID3D11Device> d3dDevice;
-	static ComPtr<ID3D11DeviceContext> d3dDeviceContext;
-	static ComPtr<ID3D11DepthStencilState> depthStencilState;
-	static ComPtr<IDXGISwapChain> swapChain;
-	static ComPtr<ID3D11RenderTargetView> renderTargetView;
-	static ComPtr<ID3D11RasterizerState> rasterizerState;
-	float renderTargetWidth, renderTargetHeight;
-	static HRESULT CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer, Graphics::Vertex* vertex, UINT numVertices);
-	static HRESULT CreateIndexBuffer(ComPtr<ID3D11Buffer>& indexBuffer, DWORD* indices = 0, UINT numIndices = 0);
-	static HRESULT CreatePixelShader(std::wstring filename, ComPtr<ID3D11PixelShader>& shader);
-	static HRESULT CreateVertexShader(std::wstring filename, ComPtr<ID3D11VertexShader>& shader, ComPtr<ID3D11InputLayout>& inputLayout, D3D11_INPUT_ELEMENT_DESC* desc, UINT arraySize);
-	template <class T> static HRESULT CreateConstantBuffer(ComPtr<ID3D11Buffer>& buffer) {
+	static ComPtr<ID3D11PixelShader> pixelShader;
+	static ComPtr<ID3D11InputLayout> inputLayout;
+	static ComPtr<ID3D11RasterizerState> rasterizer;
+	static bool InitDevices();
+	static bool InitSwapChain();
+	static bool InitRenderTarget();
+	static bool InitSampler();
+	static void InitRasterizer();
+	static bool CreateVertexShader(ComPtr<ID3D11VertexShader>& shader, std::wstring shaderFile, std::string function = "main");
+	static bool CreatePixelShader(ComPtr<ID3D11PixelShader>& shader, std::wstring shaderFile, std::string function = "main");
+	static void InitCamera(Math::Vec3f fPos);
+	static void UpdateCamera(Math::Vec3f fPos);
+	static inline void CreateVertexBuffer(ID3D11Buffer* &vertexBuffer, std::vector<Structures::Vertex> data) {
+		D3D11_BUFFER_DESC vertexBufferDesc = {};
+		vertexBufferDesc.ByteWidth = sizeof(Structures::Vertex) * data.size();
+		vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		vertexBufferDesc.MiscFlags = 0;
+		vertexBufferDesc.StructureByteStride = 0;
+		HRESULT hr = Graphics::device->CreateBuffer(&vertexBufferDesc, nullptr, &vertexBuffer);
+		MapVertexBuffer(vertexBuffer, data);
+		assert(SUCCEEDED(hr));
+	}
+	static inline void CreateIndexBuffer(ID3D11Buffer* &indexBuffer, std::vector<DWORD> indices) {
+		D3D11_BUFFER_DESC bufferDesc;
+		bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+		bufferDesc.ByteWidth = sizeof(DWORD) * indices.size();
+		bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		bufferDesc.MiscFlags = 0;
+		HRESULT hr = Graphics::device->CreateBuffer(&bufferDesc, nullptr, &indexBuffer);
+		MapIndexBuffer(indexBuffer, indices);
+		assert(SUCCEEDED(hr));
+	}
+	static inline void MapIndexBuffer(ID3D11Buffer*& indexBuffer, std::vector<DWORD> indices) {
+		D3D11_MAPPED_SUBRESOURCE resource;
+		Graphics::deviceContext->Map(indexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
+		DWORD* data = (DWORD*)resource.pData;
+		for (DWORD &index : indices) {
+			*data = index;
+			data++;
+		}
+		Graphics::deviceContext->Unmap(indexBuffer, 0);
+	}
+	template <class T> static inline void CreateConstantBuffer(ID3D11Buffer* &constantBuffer) {
 		D3D11_BUFFER_DESC constantBufferDesc = {};
 		constantBufferDesc.ByteWidth = sizeof(T) + 0xf & 0xfffffff0;
 		constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
 		constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		HRESULT hr = d3dDevice->CreateBuffer(&constantBufferDesc, nullptr, buffer.GetAddressOf());
-		return hr;
+		HRESULT hResult = Graphics::device->CreateBuffer(&constantBufferDesc, nullptr, &constantBuffer);
+		assert(SUCCEEDED(hResult));
 	}
-	template <class T>
-	static void SetConstantValues(ComPtr<ID3D11Buffer> buffer, T data) {
-		D3D11_MAPPED_SUBRESOURCE projectionSubresource;
-		Graphics::d3dDeviceContext->Map(buffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &projectionSubresource);
-		CopyMemory(projectionSubresource.pData, &data, sizeof(T));
-		Graphics::d3dDeviceContext->Unmap(buffer.Get(), 0);
-	}
-	static void SetVertexValues(ComPtr<ID3D11Buffer> buffer, std::vector<Graphics::Vertex> data) {
-		D3D11_MAPPED_SUBRESOURCE vSubresource;
-		Graphics::d3dDeviceContext->Map(buffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &vSubresource);
-		Graphics::Vertex* vData = (Graphics::Vertex*)vSubresource.pData;
-		for (int i = 0; i < data.size(); i++)
-		{
-			vData->pos = data[i].pos;
-			vData->tex = data[i].tex;
-			vData++;
+	static inline void MapVertexBuffer(ID3D11Buffer* &vertexBuffer, std::vector<Structures::Vertex> data) {
+		D3D11_MAPPED_SUBRESOURCE resource;
+		Graphics::deviceContext->Map(vertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
+		Structures::Vertex* vertexData = (Structures::Vertex*)resource.pData;
+		for (Structures::Vertex vertex : data) {
+			memcpy(vertexData, &vertex, sizeof(vertex));
+			vertexData++;
 		}
-		Graphics::d3dDeviceContext->Unmap(buffer.Get(), 0);
+		Graphics::deviceContext->Unmap(vertexBuffer, 0);
 	}
-	static HRESULT CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer, std::vector<Graphics::Vertex> vertex) {
-		D3D11_BUFFER_DESC bd = { 0 };
-		bd.ByteWidth = sizeof(Graphics::Vertex) * vertex.size();
-		bd.Usage = D3D11_USAGE_DYNAMIC;
-		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		HRESULT hr = Graphics::d3dDevice->CreateBuffer(&bd, nullptr, vertexBuffer.GetAddressOf());
-		SetVertexValues(vertexBuffer, vertex);
-		return hr;
+	template <class T> static inline void MapConstantBuffer(ID3D11Buffer* &constantBuffer, T data) {
+		D3D11_MAPPED_SUBRESOURCE resource;
+		Graphics::deviceContext->Map(constantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
+		CopyMemory(resource.pData, &data, sizeof(data));
+		Graphics::deviceContext->Unmap(constantBuffer, 0);
 	}
-	static HRESULT CreateIndexBuffer(ComPtr<ID3D11Buffer>& indexBuffer, std::vector<DWORD> indices) {
-		D3D11_BUFFER_DESC indexBufferDesc = { 0 };
-		indexBufferDesc.ByteWidth = sizeof(DWORD) * indices.size();
-		indexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-		indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		indexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		HRESULT hr = Graphics::d3dDevice.Get()->CreateBuffer(&indexBufferDesc, nullptr, indexBuffer.GetAddressOf());
-		D3D11_MAPPED_SUBRESOURCE iSubresource;
-		Graphics::d3dDeviceContext->Map(indexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &iSubresource);
-		DWORD* iData = (DWORD*)iSubresource.pData;
-		for (int i = 0; i < indices.size(); i++)
-		{
-			*iData = indices[i];
-			iData++;
+	static inline ID3D11ShaderResourceView* LoadTexture(std::string path) {
+		int texWidth, texHeight, texNumChannels;
+		int texForceNumChannels = 4;
+		unsigned char* testTextureBytes = stbi_load(path.c_str(), &texWidth, &texHeight,
+			&texNumChannels, texForceNumChannels);
+		assert(testTextureBytes);
+		int texBytesPerRow = 4 * texWidth;
+		ID3D11ShaderResourceView* textureView;
+		D3D11_TEXTURE2D_DESC textureDesc = {};
+		textureDesc.Width = texWidth;
+		textureDesc.Height = texHeight;
+		textureDesc.MipLevels = 1;
+		textureDesc.ArraySize = 1;
+		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.Usage = D3D11_USAGE_DEFAULT;
+		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		D3D11_SUBRESOURCE_DATA textureSubresourceData = {};
+		textureSubresourceData.pSysMem = testTextureBytes;
+		textureSubresourceData.SysMemPitch = texBytesPerRow;
+		ID3D11Texture2D* texture;
+		device->CreateTexture2D(&textureDesc, &textureSubresourceData, &texture);
+		device->CreateShaderResourceView(texture, nullptr, &textureView);
+		texture->Release();
+		free(testTextureBytes);
+		return textureView;
+		textureView->Release();
+	}
+	static inline std::vector<ID3D11ShaderResourceView*> LoadFromDir(std::string pathName){
+		std::vector<ID3D11ShaderResourceView*> images;
+		std::string searchStr = pathName + "\\*.*";
+		std::wstring search_path = std::wstring(searchStr.begin(), searchStr.end());
+		WIN32_FIND_DATA fd;
+		HANDLE hFind = ::FindFirstFile(search_path.c_str(), &fd);
+		if (hFind != INVALID_HANDLE_VALUE) {
+			do {
+				if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+					ID3D11ShaderResourceView* image;
+					std::wstring string(fd.cFileName);
+					image = LoadTexture(pathName + "\\" + std::string(string.begin(), string.end()));
+					images.push_back(image);
+				}
+			} while (::FindNextFile(hFind, &fd));
+			::FindClose(hFind);
 		}
-		Graphics::d3dDeviceContext->Unmap(indexBuffer.Get(), 0);
-		return hr;
+		return images;
 	}
-private:
-	ComPtr<IDXGIFactory1> dxgiFactory;
-	ComPtr<IDXGIAdapter1> adapter;
-	ComPtr<IDXGIDevice> dxgiDevice;
-	static ComPtr<ID2D1Factory1> factory;
-	static ComPtr<IDWriteFactory5> dWriteFactory;
-	static ComPtr<IDWriteTextFormat> textFormat;
-	static ComPtr<IDWriteTextLayout> textLayout;
-	ComPtr<ID2D1RenderTarget> dxgiRenderTarget;
-	static ComPtr<ID2D1HwndRenderTarget> renderTarget;
-	ComPtr<ID3D11Texture2D> renderTargetTexture;
-	ComPtr<ID3D11Texture2D> backBuffer;
 };

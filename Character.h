@@ -4,27 +4,31 @@
 
 class Character {
 public:
-    Character(const char* idleFrames, const char* walkingFrames, const char* hitFrames, const char* dashFrames, float nWidth, float nHeight)
-        : width(nWidth), height(nHeight) {
-        stateMachine.AddState(walking, new Animator(Sprite::LoadFromDir(walkingFrames, nWidth, nHeight), 250), "Walking", { 'W', 'A', 'S', 'D' });
+    Character(std::string idleFrames, std::string walkingFrames, std::string hitFrames, std::string dashFrames) {
+        stateMachine.AddState(walking, new Animator(Graphics::LoadFromDir(walkingFrames), 250), "Walking", { 'W', 'A', 'S', 'D' });
         MapKeyBoard();
-        stateMachine.AddState(idle, new Animator(Sprite::LoadFromDir(idleFrames, nWidth, nHeight), 250), "Idle", {});
-        stateMachine.AddState(dash, new Animator(Sprite::LoadFromDir(dashFrames, nWidth, nHeight), 50, true), "Dash", { VK_SHIFT }, 2000);
-        stateMachine.AddState(attack, new Animator(Sprite::LoadFromDir(hitFrames, nWidth, nHeight), 125, true), "Attack", { VK_LBUTTON });
+        stateMachine.AddState(idle, new Animator(Graphics::LoadFromDir(idleFrames), 250), "Idle", {});
+        stateMachine.AddState(dash, new Animator(Graphics::LoadFromDir(dashFrames), 50, true), "Dash", { VK_SHIFT }, 2000);
+        stateMachine.AddState(attack, new Animator(Graphics::LoadFromDir(hitFrames), 125, true), "Attack", { VK_LBUTTON });
         stateMachine.SetState("Idle");
-        StringToPosition();
-        rect = PrimitiveShapes::TexturedRect();
+        rect = Primitives::Sprite();
     }
     void MapKeyBoard() {
-        vKeyMap.push_back(std::make_pair(stateMachine.states[0].activationKeys[0], Math::float2(0, 1)));
-        vKeyMap.push_back(std::make_pair(stateMachine.states[0].activationKeys[1], Math::float2(-1, 0)));
-        vKeyMap.push_back(std::make_pair(stateMachine.states[0].activationKeys[2], Math::float2(0, -1)));
-        vKeyMap.push_back(std::make_pair(stateMachine.states[0].activationKeys[3], Math::float2(1, 0)));
+        vKeyMap.push_back(std::make_pair(stateMachine.states[0].mKeys[0], Math::Vec2f(0, 1)));
+        vKeyMap.push_back(std::make_pair(stateMachine.states[0].mKeys[1], Math::Vec2f(-1, 0)));
+        vKeyMap.push_back(std::make_pair(stateMachine.states[0].mKeys[2], Math::Vec2f(0, -1)));
+        vKeyMap.push_back(std::make_pair(stateMachine.states[0].mKeys[3], Math::Vec2f(1, 0)));
     }
     std::function<void()> walking = [&, this]() {
         states = States::LoadDash;
+        attackStates = AttackStates::DamageEnemy;
+        if (!InBounds()) {
+            position = prevPosition;
+            stateMachine.SetState("Idle");
+        }
         for (auto& p : vKeyMap)
-            if (p.first.isPressed()) {
+            if (p.first.isPressed() && InBounds()) {
+                prevPosition = position;
                 position += p.second * speed;
                 if (p.second.x == -1 && !facingRight)
                     Flip();
@@ -33,40 +37,56 @@ public:
             }
     };
     std::function<void()> dash = [&, this]() {
+        attackStates = AttackStates::DamageEnemy;
         switch (states) {
         case States::LoadDash: {
-            Math::float2 mousePos = BaseStateMachine::ToScreenCoord(BaseStateMachine::GetMousePos());
+            Math::Vec2f mousePos = BaseStateMachine::ToScreenCoord(BaseStateMachine::GetMousePos());
             angle = Math::GetAngle(position, mousePos);
             distance = position.GetDistance(mousePos);
             distance = Math::smoothstep(0.0f, 3.0f, distance);
             this->facingRight = (mousePos.x < position.x) ? true : false;
             states = States::UpdateDash;
         }
-        break;
+                             break;
         case States::UpdateDash: {
-            position -= Math::toVector(angle) * distance * 100.0f;
+            if (InBounds()) {
+                prevPosition = position;
+                position -= Math::toVector(angle) * distance * 100.0f;
+            }
+            else
+                position = prevPosition;
         }
-        break;
+                               break;
         }
     };
     std::function<void()> idle = [&, this]() {
         states = States::LoadDash;
+        attackStates = AttackStates::DamageEnemy;
     };
     std::function<void()> attack = [&, this]() {
         states = States::LoadDash;
+        switch (attackStates) {
+        case AttackStates::DamageEnemy: {
+            nDamage = 10.f;
+            attackStates = AttackStates::Cooldown; 
+        }
+                                      break;
+        case AttackStates::Cooldown: {
+            nDamage = 0.f;
+        }
+        }
     };
     void Update() {
-        if (BaseStateMachine::isKeyPressed('Q'))
-        {
-            SaveCharacterData();
-        }
         stateMachine.UpdateState();
     }
-    void Render() {
-        rect.SetAttributes(GetPosition());
-        rect.Draw(stateMachine.RenderState(), facingRight ? PrimitiveShapes::FlipHorizontal::FlippedHorizontal : PrimitiveShapes::FlipHorizontal::NormalHorizontal);
+    bool InBounds() {
+        return position.x < 4500 && position.x > -4500 && position.y > -2100 && position.y < 3280;
     }
-    Math::float2 GetPosition() {
+    void Render() {
+        rect.SetPosition(GetPosition());
+        rect.Draw(stateMachine.RenderState(), facingRight ? Primitives::FlipHorizontal::FlippedHorizontal : Primitives::FlipHorizontal::NormalHorizontal);
+    }
+    Math::Vec2f GetPosition() {
         return position;
     }
     float GetHealth() {
@@ -75,42 +95,39 @@ public:
     void SetHealth(float val) {
         health = val;
     }
-    void SetPosition(Math::float2 pos) {
+    void SetPosition(Math::Vec2f pos) {
         this->position = pos;
     }
-    void SaveCharacterData() {
-        if (!SaveSystem::isCurrentFile("Character.txt"))
-            SaveSystem::FileInit("Character.txt");
-        SaveSystem::DeleteLine(1);
-        this->PositionToString();
-    }
-    void StringToPosition() {
-        if (!SaveSystem::isCurrentFile("Character.txt")) return;
-        std::string data = SaveSystem::ReadLine();
-        this->position = Math::float2::toVector(data);
-    }
-    void PositionToString() {
-        SaveSystem::WriteData(this->position.toString(), true);
-    }
-    float width, height;
     enum class States {
         LoadDash,
         UpdateDash
     };
     States states = States::LoadDash;
-    bool facingRight = false;
+    enum class AttackStates {
+        DamageEnemy,
+        Cooldown,
+    }attackStates = AttackStates::DamageEnemy;
+    bool facingRight = true;
     StateMachine GetStateMachine() {
         return stateMachine;
     }
-private:
-    Math::float2 position;
-    std::vector<std::pair<BaseStateMachine::Key, Math::float2>> vKeyMap;
-    float health = 100.0f;
-    float distance = 0.0f, angle = 0.0f;
     void Flip() {
         facingRight = !facingRight;
     }
+    bool isState(std::string state) {
+        return stateMachine.equals(state);
+    }
+    void Destroy() {
+        stateMachine.Clear();
+        rect.Free();
+    }
+    float nDamage = 0.0f;
+private:
+    Math::Vec2f position, prevPosition;
+    std::vector<std::pair<BaseStateMachine::Key, Math::Vec2f>> vKeyMap;
+    float health = 100.0f;
+    float distance = 0.0f, angle = 0.0f;
     float speed = 10.0f;
     StateMachine stateMachine;
-    PrimitiveShapes::TexturedRect rect;
+    Primitives::Sprite rect;
 };
