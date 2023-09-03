@@ -4,62 +4,64 @@
 #include <algorithm>
 #include <functional>
 
+enum class MouseWheel {
+	WHEEL_UP,
+	WHEEL_DOWN,
+	WHEEL_UNKNOWN,
+};
+typedef std::chrono::time_point<std::chrono::high_resolution_clock> timePoint;
+
+inline float GetTimeLapse(timePoint tp1, timePoint tp2) {
+	return std::chrono::duration<float>(tp1 - tp2).count();
+}
+inline MouseWheel GetMouseWheel(MSG msg = Window::windowMessage) {
+	if (msg.message == WM_MOUSEWHEEL) {
+		short delta = GET_WHEEL_DELTA_WPARAM(msg.wParam);
+		if (delta > 0) return MouseWheel::WHEEL_UP;
+		else if (delta < 0) return MouseWheel::WHEEL_DOWN;
+		else return MouseWheel::WHEEL_UNKNOWN;
+	}
+}
+inline bool isKeyPressed(char a) {
+	return (GetAsyncKeyState((unsigned short)a) & 0x8000);
+}
+template<class... Args>
+inline bool isKeyPressed(char a, Args... args) {
+	bool isPressed = isKeyPressed(a);
+	isPressed = isPressed && isKeyPressed(args...);
+	return isPressed;
+}
+inline bool isKeyReleased(char a, MSG msg = Window::windowMessage) {
+	return (msg.message == WM_KEYUP && a == (char)msg.wParam);
+}
+template<class... Args>
+inline bool isKeyReleased(char a, Args... args) {
+	bool isReleased = isKeyReleased(a);
+	isReleased &= isKeyReleased(args...);
+	return isReleased;
+}
+inline bool getKeyPressed() {
+	for (int i = 0x01; i < 0xFE; i++) {
+		if (isKeyPressed(i)) return true;
+	}
+	return false;
+}
+inline Vec2f GetMousePos() {
+	POINT* pt = new POINT;
+	GetCursorPos(pt);
+	ScreenToClient(GetActiveWindow(), pt);
+	return Vec2f((float)pt->x, (float)pt->y);
+	delete pt;
+}
+inline Vec2f ToScreenCoord(Vec2f pos) {
+	Vec2f ret;
+	ret.x = Camera::Position.z * Window::width * (2.0f * pos.x / Window::width - 1.0f);
+	ret.y = -Camera::Position.z * Window::height * (2.0f * pos.y / Window::height - 1.0f);
+	return ret;
+}
+
 class BaseStateMachine {
 public:
-	static enum class MouseWheel {
-		WHEEL_UP,
-		WHEEL_DOWN,
-		WHEEL_UNKNOWN,
-	};
-	typedef std::chrono::time_point<std::chrono::high_resolution_clock> timePoint;
-	static float GetTimeLapse(timePoint tp1, timePoint tp2) {
-		return std::chrono::duration<float>(tp1 - tp2).count();
-	}
-	static MouseWheel GetMouseWheel(MSG msg = Window::windowMessage) {
-		if (msg.message == WM_MOUSEWHEEL) {
-			short delta = GET_WHEEL_DELTA_WPARAM(msg.wParam);
-			if (delta > 0) return MouseWheel::WHEEL_UP;
-			else if (delta < 0) return MouseWheel::WHEEL_DOWN;
-			else return MouseWheel::WHEEL_UNKNOWN;
-		}
-	}
-	static bool isKeyPressed(char a) {
-		return (GetAsyncKeyState((unsigned short)a) & 0x8000);
-	}
-	template<class... Args>
-	static bool isKeyPressed(char a, Args... args) {
-		bool isPressed = BaseStateMachine::isKeyPressed(a);
-		isPressed = isPressed && isKeyPressed(args...);
-		return isPressed;
-	}
-	static bool isKeyReleased(char a, MSG msg = Window::windowMessage) {
-		return (msg.message == WM_KEYUP && a == (char)msg.wParam);
-	}
-	template<class... Args>
-	static bool isKeyReleased(char a, Args... args) {
-		bool isReleased = BaseStateMachine::isKeyReleased(a);
-		isReleased &= isKeyReleased(args...);
-		return isReleased;
-	}
-	static bool getKeyPressed() {
-		for (int i = 0x01; i < 0xFE; i++) {
-			if (isKeyPressed(i)) return true;
-		}
-		return false;
-	}
-	static Math::Vec2f GetMousePos() {
-		POINT* pt = new POINT;
-		GetCursorPos(pt);
-		ScreenToClient(GetActiveWindow(), pt);
-		return Math::Vec2f((float)pt->x, (float)pt->y);
-		delete pt;
-	}
-	static Math::Vec2f ToScreenCoord(Math::Vec2f pos) {
-		Math::Vec2f ret;
-		ret.x = Camera::Position.z * Window::width * (2.0f * pos.x / Window::width - 1.0f);
-		ret.y = -Camera::Position.z * Window::height * (2.0f * pos.y / Window::height - 1.0f);
-		return ret;
-	}
 	typedef struct Key {
 		std::vector<char> keys;
 		void Add(char c) {
@@ -75,12 +77,12 @@ public:
 		}
 		bool isPressed() {
 			bool keyPressed = true;
-			std::for_each(keys.begin(), keys.end(), [&, this](char a) {keyPressed &= BaseStateMachine::isKeyPressed(a); });
+			std::for_each(keys.begin(), keys.end(), [&, this](char a) {keyPressed &= isKeyPressed(a); });
 			return keyPressed;
 		}
 		bool isReleased() {
 			bool keyPressed = true;
-			std::for_each(keys.begin(), keys.end(), [&, this](char a) {keyPressed &= BaseStateMachine::isKeyReleased(a); });
+			std::for_each(keys.begin(), keys.end(), [&, this](char a) {keyPressed &= isKeyReleased(a); });
 			return keyPressed;
 		}
 	}Key;
@@ -97,7 +99,7 @@ public:
 				activated = false;
 				tp1 = Clock::now();
 			}
-			if (cooldown < BaseStateMachine::GetTimeLapse(Clock::now(), tp1)) {
+			if (cooldown < GetTimeLapse(Clock::now(), tp1)) {
 				activated = true;
 				tp1 = Clock::now();
 			}
@@ -143,7 +145,7 @@ public:
 			});
 		return returnState;
 	}
-	ID3D11ShaderResourceView* RenderState() {
+	Structures::Texture RenderState() {
 		return GetCurrentState().mAnimator->UpdateFrames();
 	}
 	bool equals(std::string state) const {
@@ -155,11 +157,7 @@ public:
 	std::vector<StateController> states;
 	void Clear() {
 		for (auto state : states) {
-			for (auto frame : state.mAnimator->frames) {
-				frame.frame->Release();
-				frame.~Frame();
-			}
-			state.mAnimator->frames.clear();
+			state.mAnimator->Free();
 			delete state.mAnimator;
 			for (auto key : state.mKeys) {
 				key.keys.clear();
@@ -236,8 +234,7 @@ public:
 		NextLevel,
 		GotoLevel
 	} nLevel = ManageLevel::CurrentLevel;
-	std::string sLevelName;
-	std::string nLevelName = "";
+	int nIndex = 0;
 	virtual void Render() = 0;
 	virtual void FixedUpdate() = 0;
 	virtual void Update() = 0;

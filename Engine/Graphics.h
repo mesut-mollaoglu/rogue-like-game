@@ -33,7 +33,7 @@ struct Window {
 };
 
 struct Camera {
-	static Math::Vec3f Position;
+	static Vec3f Position;
 	static XMMATRIX projMatrix, viewMatrix, worldMatrix;
 	static XMVECTOR eyePos;
 	static XMVECTOR lookAtPos;
@@ -63,10 +63,22 @@ namespace Structures {
 	}Projection;
 	typedef struct Constants
 	{
-		Math::Vec2f pos;
-		Math::Vec2f flipScale;
+		Vec2f pos;
+		Vec2f flipScale;
 		Structures::Color color;
 	}Constants;
+	typedef struct Health {
+		float fMax;
+		float fMin;
+		float fCurrent;
+		float fPadding;
+	};
+	typedef struct Texture {
+		ID3D11ShaderResourceView* texture;
+		float width;
+		float height;
+		~Texture() {}
+	};
 };
 
 class Graphics {
@@ -93,24 +105,26 @@ public:
 	static Graphics::Topology nDrawModes[5];
 	static uint32_t stride;
 	static uint32_t offset;
+	static ComPtr<ID3D11BlendState> blendState;
 	static ComPtr<ID3D11SamplerState> samplerState;
     static ComPtr<ID3D11Device1> device;
     static ComPtr<ID3D11DeviceContext1> deviceContext;
 	static ComPtr<IDXGISwapChain1> swapChain;
 	static ComPtr<ID3D11RenderTargetView> renderTarget;
-	static ComPtr<ID3D11VertexShader> vertexShader;
-	static ComPtr<ID3D11PixelShader> pixelShader;
 	static ComPtr<ID3D11InputLayout> inputLayout;
 	static ComPtr<ID3D11RasterizerState> rasterizer;
+	static ComPtr<ID3D11PixelShader> pixelShader;
+	static ComPtr<ID3D11VertexShader> vertexShader;
 	static bool InitDevices();
 	static bool InitSwapChain();
 	static bool InitRenderTarget();
 	static bool InitSampler();
 	static void InitRasterizer();
+	static void InitBlendState();
 	static bool CreateVertexShader(ComPtr<ID3D11VertexShader>& shader, std::wstring shaderFile, std::string function = "main");
 	static bool CreatePixelShader(ComPtr<ID3D11PixelShader>& shader, std::wstring shaderFile, std::string function = "main");
-	static void InitCamera(Math::Vec3f fPos);
-	static void UpdateCamera(Math::Vec3f fPos);
+	static void InitCamera(Vec3f fPos);
+	static void UpdateCamera(Vec3f fPos);
 	static inline void CreateVertexBuffer(ID3D11Buffer* &vertexBuffer, std::vector<Structures::Vertex> data) {
 		D3D11_BUFFER_DESC vertexBufferDesc = {};
 		vertexBufferDesc.ByteWidth = sizeof(Structures::Vertex) * data.size();
@@ -169,17 +183,20 @@ public:
 		CopyMemory(resource.pData, &data, sizeof(data));
 		Graphics::deviceContext->Unmap(constantBuffer, 0);
 	}
-	static inline ID3D11ShaderResourceView* LoadTexture(std::string path) {
-		int texWidth, texHeight, texNumChannels;
+	static inline Structures::Texture LoadTexture(std::string path) {
+		Structures::Texture tex;
+		int texNumChannels, texWidth, texHeight;
 		int texForceNumChannels = 4;
 		unsigned char* testTextureBytes = stbi_load(path.c_str(), &texWidth, &texHeight,
 			&texNumChannels, texForceNumChannels);
+		tex.width = static_cast<float>(texWidth);
+		tex.height = static_cast<float>(texHeight);
 		assert(testTextureBytes);
-		int texBytesPerRow = 4 * texWidth;
+		int texBytesPerRow = 4 * tex.width;
 		ID3D11ShaderResourceView* textureView;
 		D3D11_TEXTURE2D_DESC textureDesc = {};
-		textureDesc.Width = texWidth;
-		textureDesc.Height = texHeight;
+		textureDesc.Width = tex.width;
+		textureDesc.Height = tex.height;
 		textureDesc.MipLevels = 1;
 		textureDesc.ArraySize = 1;
 		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
@@ -191,14 +208,14 @@ public:
 		textureSubresourceData.SysMemPitch = texBytesPerRow;
 		ID3D11Texture2D* texture;
 		device->CreateTexture2D(&textureDesc, &textureSubresourceData, &texture);
-		device->CreateShaderResourceView(texture, nullptr, &textureView);
+		device->CreateShaderResourceView(texture, nullptr, &tex.texture);
 		texture->Release();
 		free(testTextureBytes);
-		return textureView;
-		textureView->Release();
+		return tex;
+		tex.texture->Release();
 	}
-	static inline std::vector<ID3D11ShaderResourceView*> LoadFromDir(std::string pathName){
-		std::vector<ID3D11ShaderResourceView*> images;
+	static inline std::vector<Structures::Texture> LoadFromDir(std::string pathName){
+		std::vector<Structures::Texture> images;
 		std::string searchStr = pathName + "\\*.*";
 		std::wstring search_path = std::wstring(searchStr.begin(), searchStr.end());
 		WIN32_FIND_DATA fd;
@@ -206,7 +223,7 @@ public:
 		if (hFind != INVALID_HANDLE_VALUE) {
 			do {
 				if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-					ID3D11ShaderResourceView* image;
+					Structures::Texture image;
 					std::wstring string(fd.cFileName);
 					image = LoadTexture(pathName + "\\" + std::string(string.begin(), string.end()));
 					images.push_back(image);
@@ -215,5 +232,19 @@ public:
 			::FindClose(hFind);
 		}
 		return images;
+	}
+	static inline void SetStates(){
+		float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		Graphics::CreatePixelShader(pixelShader, L"Shaders\\shaders.hlsl", "ps_main");
+		Graphics::CreateVertexShader(vertexShader, L"Shaders\\shaders.hlsl", "vs_main");
+		deviceContext->RSSetState(rasterizer.Get());
+		deviceContext->OMSetRenderTargets(1, renderTarget.GetAddressOf(), nullptr);
+		deviceContext->OMSetBlendState(blendState.Get(), blendFactor, 0xffffffff);
+		Graphics::SetDrawMode("TriangleList");
+		deviceContext->IASetInputLayout(inputLayout.Get());
+		deviceContext->VSSetShader(vertexShader.Get(), nullptr, 0);
+		deviceContext->PSSetShader(pixelShader.Get(), nullptr, 0);
+		deviceContext->PSSetSamplers(0, 1, samplerState.GetAddressOf());
+		deviceContext->VSSetConstantBuffers(1, 1, &Camera::projBuffer);
 	}
 };

@@ -5,19 +5,22 @@
 class Character {
 public:
     Character(std::string idleFrames, std::string walkingFrames, std::string hitFrames, std::string dashFrames) {
+        mHealth = HealthBar(300, 300, 0);
+        mHealth.SetPosition({ ToScreenCoord({120, 30})});
+        mHealth.SetTexture(Graphics::LoadTexture("healthbar.png"), .25f);
         stateMachine.AddState(walking, new Animator(Graphics::LoadFromDir(walkingFrames), 250), "Walking", { 'W', 'A', 'S', 'D' });
         MapKeyBoard();
         stateMachine.AddState(idle, new Animator(Graphics::LoadFromDir(idleFrames), 250), "Idle", {});
         stateMachine.AddState(dash, new Animator(Graphics::LoadFromDir(dashFrames), 50, true), "Dash", { VK_SHIFT }, 2000);
         stateMachine.AddState(attack, new Animator(Graphics::LoadFromDir(hitFrames), 125, true), "Attack", { VK_LBUTTON });
         stateMachine.SetState("Idle");
-        rect = Primitives::Sprite();
+        rect = Sprite();
     }
     void MapKeyBoard() {
-        vKeyMap.push_back(std::make_pair(stateMachine.states[0].mKeys[0], Math::Vec2f(0, 1)));
-        vKeyMap.push_back(std::make_pair(stateMachine.states[0].mKeys[1], Math::Vec2f(-1, 0)));
-        vKeyMap.push_back(std::make_pair(stateMachine.states[0].mKeys[2], Math::Vec2f(0, -1)));
-        vKeyMap.push_back(std::make_pair(stateMachine.states[0].mKeys[3], Math::Vec2f(1, 0)));
+        vKeyMap.push_back(std::make_pair(stateMachine.states[0].mKeys[0], Vec2f(0, 1)));
+        vKeyMap.push_back(std::make_pair(stateMachine.states[0].mKeys[1], Vec2f(-1, 0)));
+        vKeyMap.push_back(std::make_pair(stateMachine.states[0].mKeys[2], Vec2f(0, -1)));
+        vKeyMap.push_back(std::make_pair(stateMachine.states[0].mKeys[3], Vec2f(1, 0)));
     }
     std::function<void()> walking = [&, this]() {
         states = States::LoadDash;
@@ -40,10 +43,10 @@ public:
         attackStates = AttackStates::DamageEnemy;
         switch (states) {
         case States::LoadDash: {
-            Math::Vec2f mousePos = BaseStateMachine::ToScreenCoord(BaseStateMachine::GetMousePos());
-            angle = Math::GetAngle(position, mousePos);
+            Vec2f mousePos = ToScreenCoord(GetMousePos());
+            angle = GetAngle(position, mousePos);
             distance = position.GetDistance(mousePos);
-            distance = Math::smoothstep(0.0f, 3.0f, distance);
+            distance = Smoothstep(0.0f, 3.0f, distance);
             this->facingRight = (mousePos.x < position.x) ? true : false;
             states = States::UpdateDash;
         }
@@ -51,7 +54,7 @@ public:
         case States::UpdateDash: {
             if (InBounds()) {
                 prevPosition = position;
-                position -= Math::toVector(angle) * distance * 100.0f;
+                position -= toVector(angle) * distance * 100.0f;
             }
             else
                 position = prevPosition;
@@ -74,19 +77,24 @@ public:
         case AttackStates::Cooldown: {
             nDamage = 0.f;
         }
+                                   break;
         }
     };
     void Update() {
         stateMachine.UpdateState();
     }
     bool InBounds() {
-        return position.x < 4500 && position.x > -4500 && position.y > -2100 && position.y < 3280;
+        return position.x < 4500 && position.x > -4500 && position.y > -2100 && position.y < 2100;
     }
     void Render() {
         rect.SetPosition(GetPosition());
-        rect.Draw(stateMachine.RenderState(), facingRight ? Primitives::FlipHorizontal::FlippedHorizontal : Primitives::FlipHorizontal::NormalHorizontal);
+        rect.SetTexture(stateMachine.RenderState());
+        rect.Draw(facingRight ? FlipHorizontal::FlippedHorizontal : FlipHorizontal::NormalHorizontal);
     }
-    Math::Vec2f GetPosition() {
+    void RenderHealth() {
+        mHealth.Draw();
+    }
+    Vec2f GetPosition() {
         return position;
     }
     float GetHealth() {
@@ -94,9 +102,10 @@ public:
     }
     void SetHealth(float val) {
         health = val;
+        mHealth.SetHealth(health);
     }
-    void SetPosition(Math::Vec2f pos) {
-        this->position = pos;
+    void SetPosition(Vec2f pos) {
+        position = pos;
     }
     enum class States {
         LoadDash,
@@ -120,14 +129,22 @@ public:
     void Destroy() {
         stateMachine.Clear();
         rect.Free();
+        mHealth.Free();
+    }
+    const char* GetState() {
+        return stateMachine.GetState();
+    }
+    void SetState(std::string state) {
+        stateMachine.SetState(state);
     }
     float nDamage = 0.0f;
 private:
-    Math::Vec2f position, prevPosition;
-    std::vector<std::pair<BaseStateMachine::Key, Math::Vec2f>> vKeyMap;
-    float health = 100.0f;
+    Vec2f position, prevPosition;
+    std::vector<std::pair<BaseStateMachine::Key, Vec2f>> vKeyMap;
+    float health = 300.f;
     float distance = 0.0f, angle = 0.0f;
     float speed = 10.0f;
     StateMachine stateMachine;
-    Primitives::Sprite rect;
+    Sprite rect;
+    HealthBar mHealth;
 };

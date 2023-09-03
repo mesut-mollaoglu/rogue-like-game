@@ -1,5 +1,6 @@
 #include "Graphics.h"
 
+ComPtr<ID3D11BlendState> Graphics::blendState;
 ComPtr<ID3D11Device1> Graphics::device;
 ComPtr<ID3D11DeviceContext1> Graphics::deviceContext;
 ComPtr<ID3D11SamplerState> Graphics::samplerState;
@@ -19,7 +20,7 @@ WPARAM Window::wParam;
 LPARAM Window::lParam;
 std::wstring Window::className = L"ClassName";
 std::wstring Window::windowName = L"WindowName";
-Math::Vec3f Camera::Position;
+Vec3f Camera::Position;
 XMMATRIX Camera::projMatrix, Camera::viewMatrix, Camera::worldMatrix;
 XMVECTOR Camera::eyePos;
 XMVECTOR Camera::lookAtPos;
@@ -196,7 +197,7 @@ bool Graphics::InitSampler() {
     return SUCCEEDED(hr);
 }
 
-void Graphics::InitCamera(Math::Vec3f fPos) {
+void Graphics::InitCamera(Vec3f fPos) {
     Graphics::CreateConstantBuffer<Structures::Projection>(Camera::projBuffer);
     Camera::defaultUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     Camera::defaultForward = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
@@ -211,7 +212,7 @@ void Graphics::InitCamera(Math::Vec3f fPos) {
     UpdateCamera(fPos);
 }
 
-void Graphics::UpdateCamera(Math::Vec3f fPos) {
+void Graphics::UpdateCamera(Vec3f fPos) {
     Camera::Position = fPos;
     Camera::eyePos = XMVectorSet(0.0f, 0.0f, -Camera::Position.z, 0.0f);
     Camera::lookAtPos = XMVector3TransformCoord(Camera::defaultForward, Camera::rotationDefault);
@@ -228,4 +229,18 @@ void Graphics::InitRasterizer() {
     rasterizerDesc.CullMode = D3D11_CULL_NONE;
     rasterizerDesc.FrontCounterClockwise = TRUE;
     device->CreateRasterizerState(&rasterizerDesc, rasterizer.GetAddressOf());
+}
+
+void Graphics::InitBlendState() {
+    D3D11_BLEND_DESC desc;
+    ZeroMemory(&desc, sizeof(D3D11_BLEND_DESC));
+    desc.RenderTarget[0].BlendEnable = TRUE;
+    desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+    desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+    desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    desc.RenderTarget[0].RenderTargetWriteMask = 0x0f;
+    device->CreateBlendState(&desc, &blendState);
 }

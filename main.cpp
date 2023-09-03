@@ -62,9 +62,13 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     Graphics::InitRenderTarget();
     Graphics::InitSampler();
     Graphics::InitRasterizer();
+    Graphics::InitBlendState();
     Graphics::InitCamera({ 0, 0, 5 });
     controller.vLevels = {
-        new Main()
+        new MainMenu(),
+        new Main(),
+        new Dead(),
+        new Credits()
     };
     controller.Load();
     Window::windowMessage.message = WM_NULL;

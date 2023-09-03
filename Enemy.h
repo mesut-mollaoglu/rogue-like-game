@@ -3,29 +3,48 @@
 
 class Enemy {
 public:
-	Enemy(std::string attackDir, std::string moveDir, std::string idleDir, std::string deadDir) {
-		rect = Primitives::Sprite();
+	Enemy(std::string attackDir, std::string moveDir, std::string idleDir, std::string deadDir, std::string spawnDir) {
+		rect = Sprite();
+		stateMachine.AddState(Spawn, new Animator(Graphics::LoadFromDir(spawnDir), 125, true), "Spawn");
 		stateMachine.AddState(Follow, new Animator(Graphics::LoadFromDir(moveDir), 250), "Follow");
 		stateMachine.AddState(Idle, new Animator(Graphics::LoadFromDir(idleDir), 250), "Idle");
 		stateMachine.AddState(Attack, new Animator(Graphics::LoadFromDir(attackDir), 75, true), "Attack");
 		stateMachine.AddState(Dead, new Animator(Graphics::LoadFromDir(deadDir), 250, true), "Dead");
+		stateMachine.SetState("Spawn");
 	}
+	std::function<void()> Spawn = [&, this]() {
+		attackStates = AttackStates::DamagePlayer;
+	};
 	std::function<void()> Dead = [&, this]() {};
 	std::function<void()> Follow = [&, this]() {
-		float angle = Math::GetAngle(position, characterPosition);
+		attackStates = AttackStates::DamagePlayer;
+		float angle = GetAngle(position, characterPosition);
 		float t = elapsedTime * speed;
-		t = Math::smoothstep(0.0f, 20.0f, t);
-		position -= Math::toVector(angle) * t * 10.0f;
+		t = Smoothstep(0.0f, 20.0f, t);
+		position -= toVector(angle) * t * 10.0f;
 	};
-	std::function<void()> Attack = [&, this]() {};
-	std::function<void()> Idle = [&, this]() {};
+	std::function<void()> Attack = [&, this]() {
+		switch (attackStates) {
+		case AttackStates::DamagePlayer: {
+			nDamage = 10.f;
+			attackStates = AttackStates::Cooldown;
+		}
+									  break;
+		case AttackStates::Cooldown: {
+			nDamage = 0.f;
+			if (AnimEnd()) attackStates = AttackStates::DamagePlayer;
+		}
+								   break;
+		}};
+	std::function<void()> Idle = [&, this]() {attackStates = AttackStates::DamagePlayer; };
 	void Render() {
 		rect.SetPosition(GetPosition());
-		rect.Draw(stateMachine.RenderState(), facingRight ? Primitives::FlipHorizontal::FlippedHorizontal : Primitives::FlipHorizontal::NormalHorizontal);
+		rect.SetTexture(stateMachine.RenderState());
+		rect.Draw(facingRight ? FlipHorizontal::FlippedHorizontal : FlipHorizontal::NormalHorizontal);
 	}
-	void Update(Math::Vec2f pos) {
+	void Update(Vec2f pos) {
 		characterPosition = pos;
-		float distance = Math::abs(characterPosition.GetDistance(position));
+		float distance = Abs(characterPosition.GetDistance(position));
 		if (distance < 7000.0f && distance > 550.0f) stateMachine.SetState("Follow");
 		else if (distance >= 7000.0f) stateMachine.SetState("Idle");
 		else if (distance <= 550.0f) stateMachine.SetState("Attack");
@@ -40,7 +59,7 @@ public:
 	float health = 50.f;
 	float width, height;
 	bool facingRight = false;
-	Math::Vec2f GetPosition() {
+	Vec2f GetPosition() {
 		return position;
 	}
 	void Destroy() {
@@ -51,22 +70,30 @@ public:
 		stateMachine.SetState(state);
 	}
 	bool AnimEnd() {
-		assert(stateMachine.GetCurrentState().mAnimator->ShouldPlayOnce());
+		assert(stateMachine.GetCurrentState().mAnimator->shouldPlayOnce());
 		return stateMachine.GetCurrentState().mAnimator->GetIndex() == stateMachine.GetCurrentState().mAnimator->GetSize() - 2;
 	}
 	bool isState(std::string state) {
 		return stateMachine.equals(state);
 	}
-	void SetPosition(Math::Vec2f fPos) {
+	void SetPosition(Vec2f fPos) {
 		position = fPos;
 	}
 	void SetHealth(float fHealth) {
 		health = fHealth;
 	}
+	const char* GetState() {
+		return stateMachine.GetState();
+	}
 	virtual ~Enemy(){}
+	enum class AttackStates {
+		DamagePlayer,
+		Cooldown,
+	}attackStates = AttackStates::DamagePlayer;
+	float nDamage = 0.f;
 private:
-	Math::Vec2f characterPosition;
-	Math::Vec2f position = { 0, -800 };
+	Vec2f characterPosition;
+	Vec2f position = { 0, -800 };
 	float elapsedTime = 0.0f;
 	float smoothSin(float time, float frequency, float amplitude) {
 		return amplitude * sin(2 * PI * frequency * time);
@@ -75,5 +102,5 @@ private:
 	float m_deltaTime = 1 / 100;
 	float threshold = 150.0f, speed = 4.0f;
 	AIStateMachine stateMachine;
-	Primitives::Sprite rect;
+	Sprite rect;
 };

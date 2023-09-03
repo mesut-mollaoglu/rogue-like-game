@@ -6,18 +6,18 @@ class Animator {
 public:
 	typedef std::chrono::time_point<std::chrono::steady_clock> timePoint;
 	typedef struct Frame {
-		ID3D11ShaderResourceView* frame;
+		Structures::Texture frame;
 		float duration;
 		Frame() = default;
-		Frame(ID3D11ShaderResourceView* image, float dur) {
+		Frame(Structures::Texture image, float dur) {
 			frame = image;
 			duration = dur;
 		};
 		~Frame() {}
 	} Frame;
 	Animator() = default;
-	Animator(std::vector<ID3D11ShaderResourceView*> images, float duration, bool play = false) {
-		[&, this](std::vector<ID3D11ShaderResourceView*> vec) {
+	Animator(std::vector<Structures::Texture> images, float duration, bool play = false) {
+		[&, this](std::vector<Structures::Texture> vec) {
 			for (int i = 0; i < vec.size(); i++) {
 				Frame frame = Frame(vec[i], duration);
 				frames.push_back(frame);
@@ -33,7 +33,7 @@ public:
 		this->playOnce = animator.playOnce;
 		this->notPlayed = animator.notPlayed;
 	}
-	ID3D11ShaderResourceView* UpdateFrames() {
+	Structures::Texture UpdateFrames(bool bReverse = false) {
 		if (!bInit)
 		{
 			start = now = Clock::now();
@@ -43,14 +43,14 @@ public:
 		duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - start);
 		if (duration.count() > currentFrame.duration) {
 			start = Clock::now();
-			this->index++;
+			this->index += bReverse ? -1 : 1;
 			if (notPlayed && index == frames.size()) notPlayed = false;
 			index = index % frames.size();
 			SetCurrentFrame(this->index);
 		}
 		return GetCurrentFrame();
 	}
-	ID3D11ShaderResourceView* GetCurrentFrame() {
+	Structures::Texture GetCurrentFrame() {
 		return this->currentFrame.frame;
 	}
 	bool isPlayed() {
@@ -89,8 +89,17 @@ public:
 		out << (int)anim.GetSize() << std::endl;
 		return out;
 	}
-	std::vector<Frame> frames;
+	void Free() {
+		currentFrame.frame.texture->Release();
+		currentFrame.~Frame();
+		for (auto frame : frames) {
+			frame.frame.texture->Release();
+			frame.~Frame();
+		}
+		frames.clear();
+	}
 protected:
+	std::vector<Frame> frames;
 	Frame currentFrame;
 	int index = 0;
 	bool notPlayed, playOnce;

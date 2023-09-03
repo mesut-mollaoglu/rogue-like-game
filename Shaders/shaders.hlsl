@@ -10,6 +10,13 @@ cbuffer projection : register(b1) {
     float4x4 proj;
 }
 
+cbuffer health : register(b2) {
+    float max;
+    float min;
+    float current;
+    float padding;
+}
+
 struct VS_Input {
     float3 pos : POSITION;
     float2 uv : TEXCOORD;
@@ -50,4 +57,19 @@ float4 ps_main(VS_Output input) : SV_Target
     float4 val = tex.Sample(samplerState, uv);
     clip(round(val.a) == 0 ? -1 : 1);
     return val;
+}
+
+float4 healthbar(VS_Output input) : SV_Target0{
+    float4 ret;
+    float col = current / abs(max - min);
+    ret = (input.uv.x > col) ? float4(0, 0, 0, 1) : float4(0.1, 0.1, 0.1, 0.9);
+    float4 val = tex.Sample(samplerState, input.uv);
+    clip(round(val.a) == 0 ? -1 : 1);
+    return val + ret;
+}
+
+float4 font_main(VS_Output input) : SV_TARGET
+{
+    float4 val = tex.Sample(samplerState, input.uv);
+    return (val.r == 0.0f) ? (1, 1, 1, 0) : val * color;
 }

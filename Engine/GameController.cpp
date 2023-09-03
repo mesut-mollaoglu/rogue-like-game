@@ -27,9 +27,9 @@ void GameController::Update() {
     else if (vLevels[nLevelIndex]->nLevel == Level::ManageLevel::GotoLevel) {
         vLevels[nLevelIndex]->nLevel = Level::ManageLevel::CurrentLevel;
         vLevels[nLevelIndex]->UnLoad();
-        for (std::size_t i = 0; i < vLevels.size(); i++)
-            if (!vLevels[i]->nLevelName.empty() && strcmp(vLevels[i]->sLevelName.c_str(), vLevels[nLevelIndex]->nLevelName.c_str()))
-                nLevelIndex = i;
+        int index = vLevels[nLevelIndex]->nIndex;
+        vLevels[nLevelIndex]->nIndex = 0;
+        nLevelIndex = index % vLevels.size();
         vLevels[nLevelIndex]->Load();
     }
     if (!bInit)
