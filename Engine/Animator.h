@@ -90,12 +90,13 @@ public:
 		return out;
 	}
 	void Free() {
-		currentFrame.frame.texture->Release();
+		if(!frames.empty())
+			for (auto frame : frames) {
+				frame.frame.Free();
+				frame.~Frame();
+			}
+		currentFrame.frame.Free();
 		currentFrame.~Frame();
-		for (auto frame : frames) {
-			frame.frame.texture->Release();
-			frame.~Frame();
-		}
 		frames.clear();
 	}
 protected:

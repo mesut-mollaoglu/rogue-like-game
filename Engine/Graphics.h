@@ -52,6 +52,8 @@ struct Camera {
 namespace Structures {
 	typedef struct Color {
 		float r, g, b, a;
+		bool operator!=(Structures::Color col) { return (r != col.r || g != col.g || b != col.b || a != col.a); }
+		bool operator==(Structures::Color col) { return (r == col.r && g == col.g && b == col.b && a == col.a); }
 	};
 	typedef struct Vertex {
 		float x, y, z, u, v;
@@ -77,6 +79,11 @@ namespace Structures {
 		ID3D11ShaderResourceView* texture;
 		float width;
 		float height;
+		void Free() {
+			if (texture)
+				texture->Release();
+			texture = nullptr;
+		}
 		~Texture() {}
 	};
 };
@@ -212,7 +219,7 @@ public:
 		texture->Release();
 		free(testTextureBytes);
 		return tex;
-		tex.texture->Release();
+		tex.Free();
 	}
 	static inline std::vector<Structures::Texture> LoadFromDir(std::string pathName){
 		std::vector<Structures::Texture> images;
@@ -246,5 +253,15 @@ public:
 		deviceContext->PSSetShader(pixelShader.Get(), nullptr, 0);
 		deviceContext->PSSetSamplers(0, 1, samplerState.GetAddressOf());
 		deviceContext->VSSetConstantBuffers(1, 1, &Camera::projBuffer);
+	}
+	static inline void ClearAndBegin(Structures::Color color) {
+		Graphics::MapConstantBuffer<Structures::Projection>(Camera::projBuffer, { Camera::projMatrix, Camera::worldMatrix, Camera::viewMatrix });
+		FLOAT backgroundColor[4] = { color.r, color.g, color.b, color.a };
+		Graphics::deviceContext->ClearRenderTargetView(Graphics::renderTarget.Get(), backgroundColor);
+		D3D11_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)Window::width, (FLOAT)Window::height, 0.0f, 1.0f };
+		Graphics::deviceContext->RSSetViewports(1, &viewport);
+	}
+	static inline void End() {
+		Graphics::swapChain->Present(1, 0);
 	}
 };

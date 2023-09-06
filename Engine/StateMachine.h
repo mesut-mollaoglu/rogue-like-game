@@ -9,7 +9,9 @@ enum class MouseWheel {
 	WHEEL_DOWN,
 	WHEEL_UNKNOWN,
 };
+
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> timePoint;
+using Clock = std::chrono::high_resolution_clock;
 
 inline float GetTimeLapse(timePoint tp1, timePoint tp2) {
 	return std::chrono::duration<float>(tp1 - tp2).count();
@@ -151,12 +153,12 @@ public:
 	bool equals(std::string state) const {
 		return strcmp(GetState(), state.c_str()) == 0;
 	}
-	using Clock = std::chrono::high_resolution_clock;
 	StateController mCurrentState;
 	StateController mPreviousState;
 	std::vector<StateController> states;
 	void Clear() {
 		for (auto state : states) {
+			std::destroy_at(std::addressof(state.mFunction));
 			state.mAnimator->Free();
 			delete state.mAnimator;
 			for (auto key : state.mKeys) {
@@ -173,8 +175,8 @@ public:
 	void AddStateComb(std::function<void()> func, Animator* anim, std::string name, std::vector<Key> keys, float cooldown = 0) {
 		StateController* controller = new StateController(func, anim, name, keys, cooldown / 1000);
 		states.push_back(*controller);
+		mCurrentState = *controller;
 		delete controller;
-		mCurrentState = states[0];
 	}
 	void AddState(std::function<void()> func, Animator* anim, std::string name, std::vector<char> keys, float cooldown = 0) {
 		std::vector<Key> container;

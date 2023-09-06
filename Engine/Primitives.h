@@ -118,6 +118,7 @@ typedef struct Sprite {
 	}
 	void SetPosition(Vec2f pos) {
 		position = pos;
+		Graphics::MapConstantBuffer<Structures::Constants>(constantBuffer, { {position.x / Window::width, position.y / Window::height}, {1, 1}, {0, 0, 0, 0} });
 	}
 	void SetTexture(Structures::Texture tex, float sizeMultiplier = 1.0f) {
 		if (mTexture.texture == nullptr || mTexture.width != tex.width || mTexture.height != tex.height)
@@ -138,7 +139,7 @@ typedef struct Sprite {
 		constantBuffer->Release();
 		vertexBuffer->Release();
 		indexBuffer->Release();
-		mTexture.texture->Release();
+		mTexture.Free();
 	}
 };
 
@@ -259,7 +260,7 @@ typedef struct Text {
 			int letter = ((int)mText[i]) - 32;
 			sum += (letter == 0) ? spaceSize : Data::fontData[letter].size;
 		}
-		return sum * Camera::Position.z;
+		return sum * 42.f * multiplier;
 	}
 	void Free() {
 		shader.Reset();
@@ -314,6 +315,7 @@ typedef struct Button {
 		mSprite.Draw();
 	}
 	void Free() {
+		std::destroy_at(std::addressof(mFunction));
 		mSprite.Free();
 	}
 };

@@ -113,7 +113,7 @@ bool Graphics::InitSwapChain() {
     swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
     swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-    swapChainDesc.Flags = 0;
+    swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
     hr = dxgiFactory->CreateSwapChainForHwnd(device.Get(), Window::windowHandle, &swapChainDesc, 0, 0, &swapChain);
     assert(SUCCEEDED(hr));
     dxgiFactory->Release();

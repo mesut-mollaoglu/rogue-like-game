@@ -8,12 +8,12 @@ public:
     SaveFile() = default;
     SaveFile(const std::string nFileName) {
         sFileName = nFileName;
-        mInputFile.open(nFileName);
+        mInputFile.open(nFileName, std::ios::in | std::ios::app);
         std::stringstream ss;
         ss << mInputFile.rdbuf();
         sContent = ss.str();
         ss.clear();
-        mOutputFile.open(nFileName);
+        mOutputFile.open(nFileName, std::ios::app | std::ios::out);
     }
     void UpdateFile() {
         if (mOutputFile.is_open()) mOutputFile.close();
@@ -53,6 +53,13 @@ public:
                 return i+1;
         }
         return 0;
+    }
+    std::size_t GetLineBreaks() {
+        std::size_t nCount = 0;
+        for (int i = 0; i < sContent.size(); i++)
+            if (sContent[i] == '\n')
+                nCount++;
+        return nCount;
     }
     void OverWrite(std::string id, std::size_t nLocation = 0) {
         std::string str;
