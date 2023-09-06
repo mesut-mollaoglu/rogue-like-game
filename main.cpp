@@ -48,7 +48,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     Window::windowHandle = CreateWindowEx(WS_EX_OVERLAPPEDWINDOW,
         Window::className.c_str(),
         Window::windowName.c_str(),
-        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME | WS_VISIBLE,
         CW_USEDEFAULT, CW_USEDEFAULT,
         Window::width,
         Window::height,
@@ -68,7 +68,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         new MainMenu(),
         new Main(),
         new Dead(),
-        new Credits()
+        new Credits(),
+        new Marketplace()
     };
     controller.Load();
     Window::windowMessage.message = WM_NULL;
@@ -83,6 +84,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         }
     }
     controller.Unload();
+    Graphics::swapChain->SetFullscreenState(FALSE, NULL);
     return Window::windowMessage.wParam;
 }
 

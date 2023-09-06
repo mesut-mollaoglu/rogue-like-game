@@ -3,18 +3,13 @@
 
 class Enemy {
 public:
-	Enemy(std::string attackDir, std::string moveDir, std::string idleDir, std::string deadDir, std::string spawnDir) {
+	Enemy(std::string attackDir, std::string moveDir, std::string idleDir, std::string deadDir) {
 		rect = Sprite();
-		stateMachine.AddState(Spawn, new Animator(Graphics::LoadFromDir(spawnDir), 125, true), "Spawn");
 		stateMachine.AddState(Follow, new Animator(Graphics::LoadFromDir(moveDir), 250), "Follow");
 		stateMachine.AddState(Idle, new Animator(Graphics::LoadFromDir(idleDir), 250), "Idle");
 		stateMachine.AddState(Attack, new Animator(Graphics::LoadFromDir(attackDir), 75, true), "Attack");
 		stateMachine.AddState(Dead, new Animator(Graphics::LoadFromDir(deadDir), 250, true), "Dead");
-		stateMachine.SetState("Spawn");
 	}
-	std::function<void()> Spawn = [&, this]() {
-		attackStates = AttackStates::DamagePlayer;
-	};
 	std::function<void()> Dead = [&, this]() {};
 	std::function<void()> Follow = [&, this]() {
 		attackStates = AttackStates::DamagePlayer;
@@ -37,15 +32,19 @@ public:
 								   break;
 		}};
 	std::function<void()> Idle = [&, this]() {attackStates = AttackStates::DamagePlayer; };
+	bool InBounds() {
+		return position.x < 4500 && position.x > -4500 && position.y > -2100 && position.y < 2100;
+	}
 	void Render() {
 		rect.SetPosition(GetPosition());
 		rect.SetTexture(stateMachine.RenderState());
 		rect.Draw(facingRight ? FlipHorizontal::FlippedHorizontal : FlipHorizontal::NormalHorizontal);
 	}
 	void Update(Vec2f pos) {
+		if (InBounds()) bEnteredBounds = true;
 		characterPosition = pos;
 		float distance = Abs(characterPosition.GetDistance(position));
-		if (distance < 7000.0f && distance > 550.0f) stateMachine.SetState("Follow");
+		if (!bEnteredBounds || (distance < 7000.0f && distance > 550.0f)) stateMachine.SetState("Follow");
 		else if (distance >= 7000.0f) stateMachine.SetState("Idle");
 		else if (distance <= 550.0f) stateMachine.SetState("Attack");
 		this->elapsedTime += 0.01f;
@@ -56,7 +55,7 @@ public:
 		this->facingRight = (position.x > characterPosition.x) ? true : false;
 		stateMachine.UpdateState();
 	}
-	float health = 50.f;
+	float health = 10.f;
 	float width, height;
 	bool facingRight = false;
 	Vec2f GetPosition() {
@@ -65,6 +64,10 @@ public:
 	void Destroy() {
 		stateMachine.Clear();
 		rect.Free();
+		std::destroy_at(std::addressof(Follow));
+		std::destroy_at(std::addressof(Dead));
+		std::destroy_at(std::addressof(Attack));
+		std::destroy_at(std::addressof(Idle));
 	}
 	void SetState(std::string state) {
 		stateMachine.SetState(state);
@@ -103,4 +106,5 @@ private:
 	float threshold = 150.0f, speed = 4.0f;
 	AIStateMachine stateMachine;
 	Sprite rect;
+	bool bEnteredBounds = false;
 };

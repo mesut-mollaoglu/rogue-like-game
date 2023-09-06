@@ -4,10 +4,11 @@
 
 class Character {
 public:
-    Character(std::string idleFrames, std::string walkingFrames, std::string hitFrames, std::string dashFrames) {
-        mHealth = HealthBar(300, 300, 0);
+    Character(std::string idleFrames, std::string walkingFrames, std::string hitFrames, std::string dashFrames, float maxHealth = 300) {
+        mHealth = HealthBar(maxHealth, maxHealth, 0);
         mHealth.SetPosition({ ToScreenCoord({120, 30})});
         mHealth.SetTexture(Graphics::LoadTexture("healthbar.png"), .25f);
+        SetHealth(maxHealth);
         stateMachine.AddState(walking, new Animator(Graphics::LoadFromDir(walkingFrames), 250), "Walking", { 'W', 'A', 'S', 'D' });
         MapKeyBoard();
         stateMachine.AddState(idle, new Animator(Graphics::LoadFromDir(idleFrames), 250), "Idle", {});
@@ -130,12 +131,22 @@ public:
         stateMachine.Clear();
         rect.Free();
         mHealth.Free();
+        std::destroy_at(std::addressof(walking));
+        std::destroy_at(std::addressof(dash));
+        std::destroy_at(std::addressof(idle));
+        std::destroy_at(std::addressof(attack));
     }
     const char* GetState() {
         return stateMachine.GetState();
     }
     void SetState(std::string state) {
         stateMachine.SetState(state);
+    }
+    void SetSpeed(float fSpeed) {
+        speed = fSpeed;
+    }
+    float GetSpeed() {
+        return speed;
     }
     float nDamage = 0.0f;
 private:

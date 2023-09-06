@@ -1,5 +1,4 @@
 #include "Character.h"
-#include "Enemy.h"
 #include "Engine/SaveFiles.h"
 #include "GameSystems.h"
 
@@ -15,64 +14,63 @@ public:
 		LoadFontData();
 		s = SaveFile("NewFile.txt");
 		mRect = Sprite();
-		powerup = Powerup("Powerups\\fastRun.png", [&, this]() {std::cout << "Hello World" << std::endl; }, 2000);
-		chest = Chest();
-		chest.vPowerups.push_back(powerup);
-		//enemies.push_back(std::make_unique<Enemy>("eAttack", "eMove", "eIdle", "eDead", "eSpawn"));
+		w = WaveSystem(5);
+		coins = Coins();
 		character = std::make_unique<Character>("cIdle", "cWalk", "cHit", "cDash");
 		mRect.SetTexture(Graphics::LoadTexture("map.png"), 4.0f);
-		LoadData();
+		chest = Chest();
+		chest.vPowerups = { Powerup("Powerups\\fastRun.png", [&, this]() {character->SetSpeed(20.f); }, [&, this]() {character->SetSpeed(10.f); }, 80000) ,
+		Powerup("Powerups\\shield.png", [&, this]() {bDamageEnabled = false; }, [&, this]() {bDamageEnabled = true; }, 80000) ,
+		Powerup("Powerups\\health.png", [&, this]() {character->SetHealth(300.f); }, [&, this]() {character->SetSpeed(10.f); }, 80000) };
 		Graphics::SetStates();
 	}
 	void UnLoad() override {
 		delete[] Data::fontData;
-		SaveData();
 		s.UpdateFile();
 		chest.Free();
 		mRect.Free();
 		character->Destroy();
-		if (!enemies.empty())
-			for (int i = 0; i < enemies.size(); i++) {
-				enemies[i]->Destroy();
-				enemies.erase(enemies.begin() + i);
+		if (!w.enemies.empty())
+			for (int i = 0; i < w.enemies.size(); i++) {
+				w.enemies[i]->Destroy();
+				w.enemies.erase(w.enemies.begin() + i);
 			}
 	}
 	void FixedUpdate() override {
-		for (std::size_t i = 0; i < enemies.size(); i++) {
-			if (character->isState("Dash") && CheckCollision(138, 148, character->GetPosition(), enemies[i]->GetPosition()))
-				enemies[i]->health = 0;
-			if (character->isState("Attack") && CheckCollision(138, 148, character->GetPosition(), enemies[i]->GetPosition()))
-				enemies[i]->health -= character->nDamage;
-			if (enemies[i]->isState("Attack") && CheckCollision(138, 148, character->GetPosition(), enemies[i]->GetPosition()))
-				character->SetHealth(character->GetHealth() - enemies[i]->nDamage);
-			if (enemies[i]->health <= 0)
-				enemies[i]->SetState("Dead");
-			if (enemies[i]->isState("Dead") && enemies[i]->AnimEnd()) {
-				enemies[i]->Destroy();
-				enemies.erase(enemies.begin() + i);
-				enemies.push_back(std::make_unique<Enemy>("eAttack", "eMove", "eIdle", "eDead", "eSpawn"));
+		for (std::size_t i = 0; i < w.enemies.size(); i++) {
+			if (character->isState("Dash") && CheckCollision(138, 148, character->GetPosition(), w.enemies[i]->GetPosition()))
+				w.enemies[i]->health = 0;
+			if (character->isState("Attack") && CheckCollision(138, 148, character->GetPosition(), w.enemies[i]->GetPosition()))
+				w.enemies[i]->health -= character->nDamage;
+			if (bDamageEnabled && w.enemies[i]->isState("Attack") && CheckCollision(138, 148, character->GetPosition(), w.enemies[i]->GetPosition()))
+				character->SetHealth(character->GetHealth() - w.enemies[i]->nDamage);
+			if (w.enemies[i]->health <= 0)
+				w.enemies[i]->SetState("Dead");
+			if (w.enemies[i]->isState("Dead") && w.enemies[i]->AnimEnd()) {
+				w.enemies[i]->Destroy();
+				w.enemies.erase(w.enemies.begin() + i);
+				coins.SetAmount(coins.nAmount + 1);
 			}
 		}
-		if (!enemies.empty())
-			for (auto& enemy : enemies)
+		if (!w.enemies.empty())
+			for (auto& enemy : w.enemies)
 				enemy->Update(character->GetPosition());
 		character->Update();
 		chest.Update(character->GetPosition());
+		w.Update(character->GetPosition());
 	}
 	void Render() override {
-		Graphics::MapConstantBuffer<Structures::Projection>(Camera::projBuffer, { Camera::projMatrix, Camera::worldMatrix, Camera::viewMatrix });
-		FLOAT backgroundColor[4] = { 0.f, 0.f, 0.f, 1.0f };
-		Graphics::deviceContext->ClearRenderTargetView(Graphics::renderTarget.Get(), backgroundColor);
-		D3D11_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)Window::width, (FLOAT)Window::height, 0.0f, 1.0f };
-		Graphics::deviceContext->RSSetViewports(1, &viewport);
+		Graphics::ClearAndBegin({ 0.f, 0.f, 0.f, 1.0f });
 		mRect.Draw();
 		chest.Render(character->GetPosition());
+		w.Render();
+		coins.Render();
 		character->Render();
-		if (!enemies.empty())
-			for (auto& enemy : enemies)
+		if (!w.enemies.empty())
+			for (auto& enemy : w.enemies)
 				enemy->Render();
 		character->RenderHealth();
-		Graphics::swapChain->Present(1, 0);
+		Graphics::End();
 	}
 	uint8_t CheckCollision(float cWidth, float eWidth, Vec2f cPos, Vec2f ePos) {
 		float radius = (cWidth + eWidth) * 3;
@@ -80,68 +78,18 @@ public:
 		if ((radius * radius) > (vec.GetLengthSq())) return 1;
 		return 0;
 	}
-	uint8_t GetPowerup() {
-
-	}
-	inline void SaveData() {
-		s.OverWrite("Position: " + character->GetPosition().toString() + "\n");
-		s.OverWrite("Health: " + std::to_string(character->GetHealth()) + "\n", s.GetNewLine(2));
-		s.OverWrite("State: " + std::string(character->GetState()) + "\n", s.GetNewLine(3));
-		s.OverWrite("Direction: " + std::string(character->facingRight ? "Right" : "Left") + "\n", s.GetNewLine(4));
-		int nLineCount = 5;
-		if (enemies.empty()) {
-			s.DeleteBetween(s.GetNewLine(3), s.GetContent().size());
-			return;
-		}
-		for (std::size_t i = 0; i < enemies.size(); ++i) {
-			s.OverWrite("Enemy Position " + std::to_string(i) + ": " + enemies[i]->GetPosition().toString() + "\n", s.GetNewLine(nLineCount));
-			s.OverWrite("Enemy Health " + std::to_string(i) + ": " + std::to_string(enemies[i]->health) + "\n", s.GetNewLine(nLineCount + 1));
-			s.OverWrite("Enemy State " + std::to_string(i) + ": " + std::string(enemies[i]->GetState()) + "\n", s.GetNewLine(nLineCount + 2));
-			s.OverWrite("Enemy Direction " + std::to_string(i) + ": " + std::string(enemies[i]->facingRight ? "Right" : "Left") + "\n", s.GetNewLine(nLineCount + 3));
-			nLineCount += 4;
-		}
-	}
-	inline void LoadData() {
-		if (s.GetContent().empty() || atoi(s.ReadBetween(s.FindEnd("Health: "), s.GetNewLine(3) - 1).c_str()) <= 0)
-		{
-			character->SetHealth(300);
-			character->SetPosition(Vec2f(-4400, 2000));
-			character->SetState("Idle");
-			character->facingRight = false;
-			return;
-		}
-		character->SetPosition(Vec2f::toVector(s.ReadBetween(s.FindEnd("Position: "), s.GetNewLine(2) - 1)));
-		character->SetHealth(atoi(s.ReadBetween(s.FindEnd("Health: "), s.GetNewLine(3) - 1).c_str()));
-		character->SetState(s.ReadBetween(s.FindEnd("State: "), s.GetNewLine(4) - 1));
-		std::string direction = s.ReadBetween(s.FindEnd("Direction: "), s.GetNewLine(5) - 1);
-		character->facingRight = strcmp(direction.c_str(), "Right") == 0 ? 1 : 0;
-		if (enemies.empty()) {
-			s.DeleteBetween(s.GetNewLine(3), s.GetContent().size());
-			return;
-		}
-		int nLineCount = 6;
-		for (std::size_t i = 0; i < enemies.size(); ++i) {
-			enemies[i]->SetPosition(Vec2f::toVector(s.ReadBetween(s.FindEnd("Enemy Position " + std::to_string(i) + ": "), s.GetNewLine(nLineCount) - 1)));
-			enemies[i]->SetHealth(atoi(s.ReadBetween(s.FindEnd("Enemy Health " + std::to_string(i) + ": "), s.GetNewLine(nLineCount + 1) - 1).c_str()));
-			enemies[i]->SetState(s.ReadBetween(s.FindEnd("Enemy State " + std::to_string(i) + ": "), s.GetNewLine(nLineCount + 2) - 1));
-			std::string direction = s.ReadBetween(s.FindEnd("Enemy Direction " + std::to_string(i) + ": "), s.GetNewLine(nLineCount + 3) - 1).c_str();
-			enemies[i]->facingRight = strcmp(direction.c_str(), "Right") == 0 ? 1 : 0;
-			nLineCount += 4;
-		}
-	}
 	void Update() override {
-		if (isKeyPressed('Q'))
-			SaveData();
 		if (character->GetHealth() <= 0)
 			nLevel = Level::ManageLevel::NextLevel;
 	}
 private:
 	SaveFile s;
-	std::vector<std::unique_ptr<Enemy>> enemies;
+	WaveSystem w;
 	std::unique_ptr<Character> character;
 	Sprite mRect;
 	Chest chest;
-	Powerup powerup;
+	Coins coins;
+	bool bDamageEnabled = true;
 };
 
 class Credits : public Level {
@@ -153,31 +101,28 @@ public:
 	void Load() override {
 		Graphics::SetStates();
 		sprite = Sprite();
+		back = Button([&, this]() { nLevel = Level::ManageLevel::GotoLevel; nIndex = 0; }, "newMenu\\back.png", ToScreenCoord({ 920, 700 }), 0.5f);
 		sprite.SetTexture(Graphics::LoadTexture("MenuContent\\credits_screen.png"), 3.0f);
 	}
 	void Render() override {
-		Graphics::MapConstantBuffer<Structures::Projection>(Camera::projBuffer, { Camera::projMatrix, Camera::worldMatrix, Camera::viewMatrix });
-		FLOAT backgroundColor[4] = { 0.f, 0.f, 0.f, 1.0f };
-		Graphics::deviceContext->ClearRenderTargetView(Graphics::renderTarget.Get(), backgroundColor);
-		D3D11_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)Window::width, (FLOAT)Window::height, 0.0f, 1.0f };
-		Graphics::deviceContext->RSSetViewports(1, &viewport);
+		Graphics::ClearAndBegin({ 0.f, 0.f, 0.f, 1.0f });
 		sprite.Draw();
-		Graphics::swapChain->Present(1, 0);
+		back.Draw();
+		Graphics::End();
 	}
 	void FixedUpdate() override {
-		if (isKeyPressed(VK_BACK)) {
-			nLevel = Level::ManageLevel::GotoLevel;
-			nIndex = 0;
-		}
+		back.Update();
 	}
 	void Update() override {
 
 	}
 	void UnLoad() override {
 		sprite.Free();
+		back.Free();
 	}
 private:
 	Sprite sprite;
+	Button back;
 };
 
 class MainMenu : public Level {
@@ -187,28 +132,27 @@ public:
 		ticks = 150;
 	}
 	void Load() override {
-		start = Button([&, this]() { nLevel = Level::ManageLevel::NextLevel; }, "MenuContent\\start.png", ToScreenCoord({ 512, 300 }), 0.5f);
-		credits = Button([&, this]() { nLevel = Level::ManageLevel::GotoLevel; nIndex = 3; }, "MenuContent\\credits.png", ToScreenCoord({ 512, 375 }), 0.5f);
-		exit = Button([&, this]() { PostQuitMessage(0); }, "MenuContent\\exit.png", ToScreenCoord({ 512, 450 }), 0.5f);
+		start = Button([&, this]() { nLevel = Level::ManageLevel::NextLevel; }, "newMenu\\start.png", ToScreenCoord({ 512, 300 }), 0.5f);
+		credits = Button([&, this]() { nLevel = Level::ManageLevel::GotoLevel; nIndex = 3; }, "newMenu\\credits.png", ToScreenCoord({ 512, 375 }), 0.5f);
+		market = Button([&, this]() { nLevel = Level::ManageLevel::GotoLevel; nIndex = 4; }, "newMenu\\market.png", ToScreenCoord({ 512, 450 }), 0.5f);
+		exit = Button([&, this]() { PostQuitMessage(0); }, "newMenu\\exit.png", ToScreenCoord({ 512, 525 }), 0.5f);
 		sprite = Sprite();
 		sprite.SetTexture(Graphics::LoadTexture("MenuContent\\main menu.png"), 4.0f);
 		Graphics::SetStates();
 	}
 	void Render() override {
-		Graphics::MapConstantBuffer<Structures::Projection>(Camera::projBuffer, { Camera::projMatrix, Camera::worldMatrix, Camera::viewMatrix });
-		FLOAT backgroundColor[4] = { 0.f, 0.f, 0.f, 1.0f };
-		Graphics::deviceContext->ClearRenderTargetView(Graphics::renderTarget.Get(), backgroundColor);
-		D3D11_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)Window::width, (FLOAT)Window::height, 0.0f, 1.0f };
-		Graphics::deviceContext->RSSetViewports(1, &viewport);
+		Graphics::ClearAndBegin({ 0.f, 0.f, 0.f, 1.0f });
 		sprite.Draw();
 		start.Draw();
 		credits.Draw();
+		market.Draw();
 		exit.Draw();
-		Graphics::swapChain->Present(1, 0);
+		Graphics::End();
 	}
 	void FixedUpdate() override {
 		start.Update();
 		credits.Update();
+		market.Update();
 		exit.Update();
 	}
 	void Update() override {
@@ -217,6 +161,7 @@ public:
 	void UnLoad() override {
 		start.Free();
 		credits.Free();
+		market.Free();
 		exit.Free();
 		sprite.Free();
 	}
@@ -224,7 +169,65 @@ private:
 	Button start;
 	Button credits;
 	Button exit;
+	Button market;
 	Sprite sprite;
+};
+
+class Marketplace : public Level {
+public:
+	Marketplace() {
+		nLevel = Level::ManageLevel::CurrentLevel;
+		ticks = 150;
+	}
+	void Load() override {
+		LoadFontData();		
+		nItemIndex = 0;
+		vItems = { Item("Powerups\\fastRun.png", "test 1", {100, 200, 300, 400, 500}), Item("Powerups\\health.png", "test 2", {30, 40})};
+		back = Button([&, this]() { nLevel = Level::ManageLevel::GotoLevel; nIndex = 0; }, "newMenu\\back.png", ToScreenCoord({ 920, 700 }), 0.5f);
+		left = Button([&, this]() {if (nItemIndex > 0) nItemIndex--; tp = Clock::now(); }, "marketUI\\left.png", ToScreenCoord({ 64, 368 }), 1.f);
+		right = Button([&, this]() {if (nItemIndex < vItems.size() - 1) nItemIndex++; tp = Clock::now(); }, "marketUI\\right.png", ToScreenCoord({ 960, 368 }), 1.f);
+		buy = Button([&, this]() {vItems[nItemIndex].SetLevel(vItems[nItemIndex].nValueIndex + 1); }, "marketUI\\buy.png", ToScreenCoord({ 512, 700 }), .5f);
+		Graphics::SetStates();
+	}
+	void Render() override {
+		Graphics::ClearAndBegin({ 0.f, 0.f, 0.f, 1.0f });
+		back.Draw();
+		vItems[nItemIndex].mIcon.Draw();
+		vItems[nItemIndex].sDescription.DrawString();
+		vItems[nItemIndex].sLevel.DrawString();
+		left.Draw();
+		right.Draw();
+		buy.Draw();
+		Graphics::End();
+	}
+	void FixedUpdate() override {
+		back.Update();
+		if (GetTimeLapse(Clock::now(), tp) > .5f) {
+			left.Update();
+			right.Update();
+		}
+		buy.Update();
+	}
+	void Update() override {
+		
+	}
+	void UnLoad() override {
+		delete[] Data::fontData;
+		back.Free();
+		for (auto& element : vItems)
+			element.Free();
+		left.Free();
+		right.Free();
+		buy.Free();
+	}
+private:
+	timePoint tp;
+	std::vector<Item> vItems;
+	Button buy;
+	Button left;
+	Button right;
+	Button back;
+	int nItemIndex;
 };
 
 class Dead : public Level {
@@ -242,15 +245,11 @@ public:
 		Graphics::SetStates();
 	}
 	void Render() override {
-		Graphics::MapConstantBuffer<Structures::Projection>(Camera::projBuffer, { Camera::projMatrix, Camera::worldMatrix, Camera::viewMatrix });
-		FLOAT backgroundColor[4] = { 0.f, 0.f, 0.f, 1.0f };
-		Graphics::deviceContext->ClearRenderTargetView(Graphics::renderTarget.Get(), backgroundColor);
-		D3D11_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)Window::width, (FLOAT)Window::height, 0.0f, 1.0f };
-		Graphics::deviceContext->RSSetViewports(1, &viewport);
+		Graphics::ClearAndBegin({ 0.f, 0.f, 0.f, 1.f });
 		text.DrawString();
 		button.Draw();
 		home.Draw();
-		Graphics::swapChain->Present(1, 0);
+		Graphics::End();
 	}
 	void FixedUpdate() override {
 		button.Update();
