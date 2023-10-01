@@ -19,7 +19,7 @@ MSG Window::windowMessage;
 WPARAM Window::wParam;
 LPARAM Window::lParam;
 std::wstring Window::className = L"ClassName";
-std::wstring Window::windowName = L"WindowName";
+std::wstring Window::windowName = L"Rogue Like Game";
 Vec3f Camera::Position;
 XMMATRIX Camera::projMatrix, Camera::viewMatrix, Camera::worldMatrix;
 XMVECTOR Camera::eyePos;

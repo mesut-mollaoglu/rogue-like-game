@@ -41,6 +41,7 @@ struct Powerup {
 };
 
 struct Chest {
+	std::function<void()> mFunction;
 	std::vector<Powerup> vPowerups;
 	Powerup currentPowerup;
 	Sprite mSprite;
@@ -55,9 +56,9 @@ struct Chest {
 		mSprite.SetTexture(mAnimator->GetByIndex(0).frame);
 		mSprite.SetPosition({ 4000, 2100 });
 		text = Text("Press 'E' to open.", { 0, 0 }, 0.02f);
-		text.SetPosition(mSprite.position + Vec2f(0, 1000) + ToScreenCoord({512 - text.GetStringSize(), 368}));
+		text.SetPosition(mSprite.position + Vec2f(0, 800) + ToScreenCoord({512 - text.GetStringSize(), 368}));
 	}
-	void Update(Vec2f characterPosition, float ticks = 150.f) {
+	void Update(bool bCanOpen, Vec2f characterPosition, float ticks = 150.f) {
 		if(!bNoPowerup && currentPowerup.mEffect && currentPowerup.mEnd) {
 			if (currentPowerup.timeLasting > 0)
 				currentPowerup.mEffect();
@@ -68,11 +69,12 @@ struct Chest {
 			}
 			currentPowerup.timeLasting -= ticks;
 		}
-		if (Abs(characterPosition.GetDistance(mSprite.position)) < 1500.f) {
+		if (bCanOpen && Abs(characterPosition.GetDistance(mSprite.position)) < 1500.f) {
 			if (isKeyPressed('E') && !bChestOpened) OpenChest();
 		}
 	}
 	void OpenChest() {
+		if (mFunction) mFunction();
 		bChestOpened = true;
 		bNoPowerup = false;
 		while (mAnimator->GetIndex() < mAnimator->GetSize() - 1)
@@ -100,23 +102,25 @@ struct Chest {
 		}
 	}
 	void Free() {
+		std::destroy_at(std::addressof(mFunction));
 		text.Free();
 		for (auto& element : vPowerups)
 			element.Free();
 		mAnimator->Free();
 		mSprite.Free();
 		delete mAnimator;
-		if (bNoPowerup || !currentPowerup.mEffect) return;
+		if (bNoPowerup || !currentPowerup.mEffect) return;	
 		currentPowerup.Free();
 	}
 };
 
 struct WaveSystem {
 	std::vector<std::unique_ptr<Enemy>> enemies;
+	bool bFinished;
 	enum class WaveStates {
-		Cooldown,
-		Spawning,
-		Waiting
+		Cooldown = 0,
+		Spawning = 1,
+		Waiting = 2
 	} waveStates = WaveStates::Cooldown;
 	Text text;
 	float waveCooldown, spawnRate;
@@ -124,13 +128,20 @@ struct WaveSystem {
 	int nCurrentSpawnNumber;
 	WaveSystem() = default;
 	WaveSystem(int nMax) {
+		bFinished = false;
 		nMaxNumber = nMax;
 		spawnRate = 30000;
 		waveCooldown = 60000;
 		nWaveNumber = 0;
 		srand(time(0));
-		text = Text("Wave " + std::to_string(nWaveNumber), { 0, 0 }, 0.03f);
+		text = Text("Wave 0" + std::to_string(nWaveNumber), { 0, 0 }, 0.03f);
 		text.SetPosition(ToScreenCoord({430, 15})); 
+	}
+	void SetWave(int waveNumber, WaveStates state, int nSpawned) {
+		text.SetText("Wave " + std::to_string(waveNumber));
+		nWaveNumber = waveNumber;
+		waveStates = state;
+		nCurrentSpawnNumber = nSpawned;
 	}
 	void Update(Vec2f characterPosition, float nDeltaTime = 150.f) {
 		assert(waveNumber <= maxNumber);
@@ -146,6 +157,8 @@ struct WaveSystem {
 				waveCooldown = 60000;
 				waveStates = WaveStates::Spawning;
 			}
+			else if(nMaxNumber == nWaveNumber && waveCooldown <= 0)
+				bFinished = true;
 		}
 								break;
 		case WaveStates::Spawning: {
@@ -163,7 +176,7 @@ struct WaveSystem {
 			spawnRate -= nDeltaTime;
 			if (spawnRate <= 0) {
 				spawnRate = 30000;
-				if (nWaveNumber >= nCurrentSpawnNumber) waveStates = WaveStates::Spawning;
+				if (nWaveNumber+1 >= nCurrentSpawnNumber) waveStates = WaveStates::Spawning;
 				else 
 					if(enemies.empty())
 						waveStates = WaveStates::Cooldown;
@@ -202,6 +215,9 @@ struct Coins {
 	void Render() {
 		mText.DrawString();
 	}
+	void Free() {
+		mText.Free();
+	}
 };
 
 struct Item {
@@ -210,25 +226,37 @@ struct Item {
 	Sprite mIcon;
 	Text sDescription;
 	Text sLevel;
+	Text sPrice;
 	std::string desc;
-	timePoint tp;
 	Item() = default;
 	Item(std::string nLocation, std::string nDescription, std::vector<float> vList) {
 		nValueIndex = 0;
 		vValues = vList;
 		sLevel = Text("Level 1", { 0, 0 }, 0.03f);
-		sLevel.SetPosition(ToScreenCoord({512 - sLevel.GetStringSize(), 475}));
+		sLevel.SetPosition(ToScreenCoord({ 512 - sLevel.GetStringSize(), 475 }));
 		mIcon = Sprite();
 		mIcon.SetTexture(Graphics::LoadTexture(nLocation));
 		mIcon.SetPosition(ToScreenCoord({ 512, 250 }));
 		desc = nDescription;
-		sDescription = Text(nDescription, {0, 0}, 0.03f);
+		sDescription = Text(nDescription, { 0, 0 }, 0.03f);
 		sDescription.SetPosition(ToScreenCoord({ 512 - sDescription.GetStringSize(), 400 }));
+		sPrice = Text("$02", { 0, 0 }, 0.03f);
+		sPrice.SetPosition(ToScreenCoord({512-sDescription.GetStringSize(), 550}));
 	}
 	void SetIndex(int index) {
 		assert(nValueIndex != index);
 		if (index >= vValues.size()) return;
 		nValueIndex = index;
+	}
+	void SetPrice(int value) {
+		std::string price = std::to_string(value);
+		if (price.size() < 2) {
+			sPrice.SetText("$0" + price);
+			sPrice.SetPosition(ToScreenCoord({512-sPrice.GetStringSize(), 550}));
+			return;
+		}
+		sPrice.SetText("$" + price);
+		sPrice.SetPosition(ToScreenCoord({ 512 - sPrice.GetStringSize(), 550 }));
 	}
 	int FindValue(float val) {
 		for (int i = 0; i < vValues.size(); i++)
@@ -237,18 +265,17 @@ struct Item {
 		return -1;
 	}
 	void SetLevel(int index) {
-		if (GetTimeLapse(Clock::now(), tp) < .5f)
-			return;
 		SetIndex(index);
+		SetPrice(2 << index);
 		sLevel.SetText("Level " + std::to_string(nValueIndex+1));
 		sLevel.SetPosition(ToScreenCoord({512-sLevel.GetStringSize(), 475}));
-		tp = Clock::now();
 	}
 	void Free() {
 		vValues.clear();
 		mIcon.Free();
 		sDescription.Free();
 		sLevel.Free();
+		sPrice.Free();
 	}
 	float GetCurrentValue() {
 		return vValues[nValueIndex];

@@ -23,11 +23,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
-    AllocConsole();
-    freopen("conin$", "r", stdin);
-    freopen("conout$", "w", stdout);
-    freopen("conout$", "w", stderr);
-    printf("Debugging Window:\n");
     WNDCLASSEXW winClass = {};
     winClass.cbSize = sizeof(WNDCLASSEXW);
     winClass.style = CS_HREDRAW | CS_VREDRAW;
@@ -69,7 +64,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         new Main(),
         new Dead(),
         new Credits(),
-        new Marketplace()
+        new Marketplace(),
+        new Win(),
+        new Pause()
     };
     controller.Load();
     Window::windowMessage.message = WM_NULL;

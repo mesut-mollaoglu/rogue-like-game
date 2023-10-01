@@ -16,7 +16,7 @@ public:
 		float angle = GetAngle(position, characterPosition);
 		float t = elapsedTime * speed;
 		t = Smoothstep(0.0f, 20.0f, t);
-		position -= toVector(angle) * t * 10.0f;
+		position -= toVector(angle) * t * 20.0f;
 	};
 	std::function<void()> Attack = [&, this]() {
 		switch (attackStates) {
@@ -84,6 +84,9 @@ public:
 	}
 	void SetHealth(float fHealth) {
 		health = fHealth;
+	}
+	float GetHealth() {
+		return health;
 	}
 	const char* GetState() {
 		return stateMachine.GetState();

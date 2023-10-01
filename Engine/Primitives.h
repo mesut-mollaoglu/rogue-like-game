@@ -38,6 +38,10 @@ inline void LoadFontData() {
 	fin.close();
 }
 
+inline void FreeFontData() {
+	delete[] Data::fontData;
+}
+
 inline std::vector<Structures::Vertex> GetRotatedVertex(float width, float height, float depth, float fAngle, float nAspect) {
 	std::vector<Structures::Vertex> vertexData;
 	vertexData.push_back(Structures::Vertex{ (-width * cos(fAngle) - height * sin(fAngle)) * nAspect, (-width * sin(fAngle) + height * cos(fAngle)) * nAspect, depth, 0, 0 });

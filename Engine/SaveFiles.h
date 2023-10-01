@@ -19,6 +19,8 @@ public:
         if (mOutputFile.is_open()) mOutputFile.close();
         mOutputFile.open(sFileName);
         mOutputFile << sContent;
+        mOutputFile.close();
+        mInputFile.close();
     }
     void Write(const std::string id, std::size_t nLocation = 0) {
         std::string str;
@@ -74,6 +76,9 @@ public:
         }
         sContent.clear();
         sContent.append(str);
+    }
+    void Clear() {
+        sContent.clear();
     }
     std::string Read(const std::size_t nSize, std::size_t nLocation = 0) {
         if (nLocation > sContent.size())
