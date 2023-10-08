@@ -50,9 +50,11 @@ public:
         std::size_t count = 0;
         for (int i = 0; i < sContent.size(); ++i) {
             if (sContent[i] == '\n')
-                nLine--;
-            if (nLine == 1)
-                return i+1;
+                count++;
+            if (nLine == count && nLine != 0)
+                return i + 1;
+            if (nLine == 0)
+                return 0;
         }
         return 0;
     }
@@ -121,7 +123,11 @@ public:
         sContent.append(data);
     }
     bool isEmpty() {
-        return sContent.empty();
+        std::string content;
+        for (char c : sContent)
+            if (c != ' ' && c != '\t' && c != '\n' && c != '\v')
+                content += c;
+        return content.empty();
     }
     std::string GetContent() {
         return sContent;

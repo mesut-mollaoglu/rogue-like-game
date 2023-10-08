@@ -13,7 +13,7 @@ struct FontData {
 
 class Data {public: static FontData* fontData; };
 
-inline void LoadFontData() {
+inline void LoadFontData(float width = 1024) {
 	Data::fontData = new FontData[95];
 	std::ifstream fin;
 	int i;
@@ -34,6 +34,8 @@ inline void LoadFontData() {
 		fin >> Data::fontData[i].left;
 		fin >> Data::fontData[i].right;
 		fin >> Data::fontData[i].size;
+		Data::fontData[i].right /= width;
+		Data::fontData[i].left /= width;
 	}
 	fin.close();
 }
@@ -140,9 +142,9 @@ typedef struct Sprite {
 		Graphics::deviceContext->DrawIndexed(6, 0, 0);
 	}
 	void Free() {
-		constantBuffer->Release();
-		vertexBuffer->Release();
-		indexBuffer->Release();
+		constantBuffer->Release(); constantBuffer = nullptr;
+		vertexBuffer->Release(); vertexBuffer = nullptr;
+		indexBuffer->Release(); indexBuffer = nullptr;
 		mTexture.Free();
 	}
 };
@@ -176,9 +178,11 @@ typedef struct HealthBar {
 		sprite.Draw(FlipHorizontal::NormalHorizontal, FlipVertical::NormalVertical, shader);
 	}
 	void Free() {
+		shader->Release(); 
 		shader.Reset();
 		sprite.Free();
 		healthBuffer->Release();
+		healthBuffer = nullptr;
 	}
 };
 
@@ -187,19 +191,21 @@ typedef struct Text {
 	ID3D11Buffer* vertexBuffer;
 	ID3D11Buffer* indexBuffer;
 	ID3D11Buffer* constantBuffer;
-	ID3D11ShaderResourceView* mFontTex;
+	Structures::Texture mFontTex;
 	int indexSize;
+	bool bRender;
 	Structures::Color color;
 	Vec2f position;
 	std::string mText;
 	float multiplier;
 	Text() = default;
 	Text(std::string sText, Vec2f pos = { 0, 0 }, float sizeMultiplier = 0.125f, Structures::Color fColor = { 1, 1, 1, 1 }) {
+		bRender = true;
 		position = pos;
 		mText = sText;
 		multiplier = sizeMultiplier;
-		if (Data::fontData == NULL) LoadFontData();
-		mFontTex = Graphics::LoadTexture("Engine\\FontFiles\\font01.tga").texture;
+		mFontTex = Graphics::LoadTexture("Engine\\FontFiles\\font01.tga");
+		if (Data::fontData == NULL) LoadFontData(mFontTex.width);
 		Graphics::CreateVertexBuffer(vertexBuffer, BuildVertex(sText));
 		Graphics::CreateIndexBuffer(indexBuffer, BuildIndex(sText));
 		Graphics::CreateConstantBuffer<Structures::Constants>(constantBuffer);
@@ -216,9 +222,29 @@ typedef struct Text {
 		Graphics::MapConstantBuffer<Structures::Constants>(constantBuffer, { {position.x / Window::width, position.y / Window::height}, {1, 1 }, fColor });
 	}
 	void SetText(std::string text) {
-		mText = text;
-		Graphics::MapVertexBuffer(vertexBuffer, BuildVertex(text));
-		Graphics::MapIndexBuffer(indexBuffer, BuildIndex(text));
+		if (countLetters(text) > countLetters(mText)) {
+			bRender = false;
+			mText = text;
+			vertexBuffer->Release();
+			vertexBuffer = nullptr;
+			indexBuffer->Release();
+			indexBuffer = nullptr;
+			Graphics::CreateVertexBuffer(vertexBuffer, BuildVertex(text));
+			Graphics::CreateIndexBuffer(indexBuffer, BuildIndex(text));
+			bRender = true;
+		}
+		else {
+			mText = text;
+			Graphics::MapVertexBuffer(vertexBuffer, BuildVertex(text));
+			Graphics::MapIndexBuffer(indexBuffer, BuildIndex(text));
+		}
+	}
+	std::size_t countLetters(std::string text) {
+		std::size_t count = 0;
+		for (char c : text)
+			if (c != ' ')
+				count++;
+		return count;
 	}
 	std::vector<Structures::Vertex> BuildVertex(std::string sText) {
 		float xPos = 0, yPos = 0;
@@ -238,7 +264,7 @@ typedef struct Text {
 				vertices.push_back(Structures::Vertex{ xPos * multiplier, yPos * multiplier, 0.f, Data::fontData[letter].left, 0.f });
 				vertices.push_back(Structures::Vertex{ (xPos + Data::fontData[letter].size) * multiplier, yPos * multiplier, 0.f, Data::fontData[letter].right, 0.f });
 				vertices.push_back(Structures::Vertex{ (xPos + Data::fontData[letter].size) * multiplier, (yPos - fontHeight) * multiplier, 0.f, Data::fontData[letter].right, 1.f });
-				xPos += Data::fontData[letter].size;
+				xPos += Data::fontData[letter].size + 0.5f;
 			}
 		}
 		return vertices;
@@ -250,8 +276,9 @@ typedef struct Text {
 		return indices;
 	}
 	void DrawString() {
+		if (!bRender) return;
 		Graphics::deviceContext->PSSetShader(shader.Get(), nullptr, 0);
-		Graphics::deviceContext->PSSetShaderResources(0, 1, &mFontTex);
+		Graphics::deviceContext->PSSetShaderResources(0, 1, &mFontTex.texture);
 		Graphics::deviceContext->VSSetConstantBuffers(0, 1, &constantBuffer);
 		Graphics::deviceContext->PSSetConstantBuffers(0, 1, &constantBuffer);
 		Graphics::deviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
@@ -262,16 +289,17 @@ typedef struct Text {
 		float sum = 0.f;
 		for (int i = 0; i < mText.size(); i++) {
 			int letter = ((int)mText[i]) - 32;
-			sum += (letter == 0) ? spaceSize : Data::fontData[letter].size;
+			sum += (letter == 0) ? spaceSize : (Data::fontData[letter].size+0.5f);
 		}
-		return sum * 42.f * multiplier;
+		return sum * 40.5f * multiplier;
 	}
 	void Free() {
+		shader->Release();
 		shader.Reset();
-		constantBuffer->Release();
-		vertexBuffer->Release();
-		indexBuffer->Release();
-		mFontTex->Release();
+		constantBuffer->Release(); constantBuffer = nullptr;
+		vertexBuffer->Release(); vertexBuffer = nullptr;
+		indexBuffer->Release(); indexBuffer = nullptr;
+		mFontTex.Free();
 	}
 };
 

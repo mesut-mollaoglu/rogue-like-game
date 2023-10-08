@@ -128,6 +128,8 @@ public:
         return stateMachine.equals(state);
     }
     void Destroy() {
+        for (auto& key : vKeyMap)
+            key.first.keys.clear();
         stateMachine.Clear();
         rect.Free();
         mHealth.Free();

@@ -10,12 +10,20 @@ enum class MouseWheel {
 	WHEEL_UNKNOWN,
 };
 
+enum class Mouse {
+	LeftMouseButton = 0,
+	MiddleMouseButton = 1, 
+	RightMouseButton = 2,
+	Unknown = 3
+};
+
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> timePoint;
 using Clock = std::chrono::high_resolution_clock;
 
 inline float GetTimeLapse(timePoint tp1, timePoint tp2) {
 	return std::chrono::duration<float>(tp1 - tp2).count();
 }
+
 inline MouseWheel GetMouseWheel(MSG msg = Window::windowMessage) {
 	if (msg.message == WM_MOUSEWHEEL) {
 		short delta = GET_WHEEL_DELTA_WPARAM(msg.wParam);
@@ -24,6 +32,21 @@ inline MouseWheel GetMouseWheel(MSG msg = Window::windowMessage) {
 		else return MouseWheel::WHEEL_UNKNOWN;
 	}
 }
+
+inline Mouse GetMouseRelease(MSG msg = Window::windowMessage) {
+	if (msg.message == WM_LBUTTONUP) return Mouse::LeftMouseButton;
+	if (msg.message == WM_MBUTTONUP) return Mouse::MiddleMouseButton;
+	if (msg.message == WM_RBUTTONUP) return Mouse::RightMouseButton;
+	return Mouse::Unknown;
+}
+
+inline Mouse GetMouseClick(MSG msg = Window::windowMessage) {
+	if (msg.message == WM_LBUTTONDOWN) return Mouse::LeftMouseButton;
+	if (msg.message == WM_MBUTTONDOWN) return Mouse::MiddleMouseButton;
+	if (msg.message == WM_RBUTTONDOWN) return Mouse::RightMouseButton;
+	return Mouse::Unknown;
+}
+
 inline bool isKeyPressed(char a) {
 	return (GetAsyncKeyState((unsigned short)a) & 0x8000);
 }

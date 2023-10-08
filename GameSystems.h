@@ -54,7 +54,7 @@ struct Chest {
 		mAnimator = new Animator(Graphics::LoadFromDir("chestFrames"), 75, true);
 		mSprite = Sprite();
 		mSprite.SetTexture(mAnimator->GetByIndex(0).frame);
-		mSprite.SetPosition({ 4000, 2100 });
+		mSprite.SetPosition({ 3800, 2100 });
 		text = Text("Press 'E' to open.", { 0, 0 }, 0.02f);
 		text.SetPosition(mSprite.position + Vec2f(0, 800) + ToScreenCoord({512 - text.GetStringSize(), 368}));
 	}
@@ -134,11 +134,12 @@ struct WaveSystem {
 		waveCooldown = 60000;
 		nWaveNumber = 0;
 		srand(time(0));
-		text = Text("Wave 0" + std::to_string(nWaveNumber), { 0, 0 }, 0.03f);
-		text.SetPosition(ToScreenCoord({430, 15})); 
+		text = Text("Wave " + std::to_string(nWaveNumber), { 0, 0 }, 0.03f);
+		text.SetPosition(ToScreenCoord({512-text.GetStringSize(), 6})); 
 	}
 	void SetWave(int waveNumber, WaveStates state, int nSpawned) {
 		text.SetText("Wave " + std::to_string(waveNumber));
+		text.SetPosition(ToScreenCoord({ 512 - text.GetStringSize(), 6 }));
 		nWaveNumber = waveNumber;
 		waveStates = state;
 		nCurrentSpawnNumber = nSpawned;
@@ -154,6 +155,7 @@ struct WaveSystem {
 				nWaveNumber++;
 				nCurrentSpawnNumber = 0;
 				text.SetText("Wave " + std::to_string(nWaveNumber));
+				text.SetPosition(ToScreenCoord({ 512 - text.GetStringSize(), 6 }));
 				waveCooldown = 60000;
 				waveStates = WaveStates::Spawning;
 			}
@@ -199,7 +201,7 @@ struct Coins {
 	int nAmount;
 	Text mText;
 	Coins() {
-		mText = Text("$000", ToScreenCoord({ 885, 15}), 0.03f);
+		mText = Text("$000", ToScreenCoord({ 875, 6}), 0.03f);
 		SetAmount(0);
 	}
 	void SetAmount(int amount) {
@@ -240,7 +242,7 @@ struct Item {
 		desc = nDescription;
 		sDescription = Text(nDescription, { 0, 0 }, 0.03f);
 		sDescription.SetPosition(ToScreenCoord({ 512 - sDescription.GetStringSize(), 400 }));
-		sPrice = Text("$02", { 0, 0 }, 0.03f);
+		sPrice = Text("$2", { 0, 0 }, 0.03f);
 		sPrice.SetPosition(ToScreenCoord({512-sDescription.GetStringSize(), 550}));
 	}
 	void SetIndex(int index) {
@@ -250,11 +252,6 @@ struct Item {
 	}
 	void SetPrice(int value) {
 		std::string price = std::to_string(value);
-		if (price.size() < 2) {
-			sPrice.SetText("$0" + price);
-			sPrice.SetPosition(ToScreenCoord({512-sPrice.GetStringSize(), 550}));
-			return;
-		}
 		sPrice.SetText("$" + price);
 		sPrice.SetPosition(ToScreenCoord({ 512 - sPrice.GetStringSize(), 550 }));
 	}

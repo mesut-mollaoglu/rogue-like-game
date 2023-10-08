@@ -30,33 +30,15 @@ public:
 		Graphics::SetStates();
 		ResumeGame();
 	}
-	void UnLoad() override {
-		FreeFontData();
-		SaveData();
-		s.UpdateFile();
-		pauseFile.UpdateFile();
-		chest.Free();
-		mRect.Free();
-		character->Destroy();
-		w.text.Free();
-		if (!w.enemies.empty())
-			for (int i = 0; i < w.enemies.size(); i++) {
-				w.enemies[i]->Destroy();
-				w.enemies.erase(w.enemies.begin() + i);
-			}
-		coins.Free();
-	}
 	void FixedUpdate() override {
 		for (std::size_t i = 0; i < w.enemies.size(); i++) {
-			if (character->isState("Dash") && CheckCollision(138, 148, character->GetPosition(), w.enemies[i]->GetPosition()))
+			if (character->isState("Dash") && CheckCollision(w.enemies[i].get()))
 				w.enemies[i]->health = 0;
-			if (character->isState("Attack") && CheckCollision(138, 148, character->GetPosition(), w.enemies[i]->GetPosition()))
+			if (character->isState("Attack") && CheckCollision(w.enemies[i].get()))
 				w.enemies[i]->health -= character->nDamage;
-			if (bDamageEnabled && w.enemies[i]->isState("Attack") && CheckCollision(138, 148, character->GetPosition(), w.enemies[i]->GetPosition()))
+			if (bDamageEnabled && w.enemies[i]->isState("Attack") && character->GetPosition().GetDistance(w.enemies[i]->GetPosition()) < 1000.f)
 				character->SetHealth(character->GetHealth() - w.enemies[i]->nDamage);
-			if (w.enemies[i]->health <= 0)
-				w.enemies[i]->SetState("Dead");
-			if (w.enemies[i]->isState("Dead") && w.enemies[i]->AnimEnd()) {
+			if (w.enemies[i]->bDead) {
 				w.enemies[i]->Destroy();
 				w.enemies.erase(w.enemies.begin() + i);
 				coins.SetAmount(coins.nAmount + nCoinIncrement);
@@ -86,11 +68,10 @@ public:
 		character->RenderHealth();
 		Graphics::End();
 	}
-	uint8_t CheckCollision(float cWidth, float eWidth, Vec2f cPos, Vec2f ePos) {
-		float radius = (cWidth + eWidth) * 3;
-		Vec2f vec = cPos - ePos;
-		if ((radius * radius) > (vec.GetLengthSq())) return 1;
-		return 0;
+	uint8_t CheckCollision(Enemy* enemy) {
+		float distance = enemy->GetPosition().GetDistance(character->GetPosition());
+		bool facing = (character->GetPosition().x < enemy->GetPosition().x && !character->facingRight) || (character->GetPosition().x >= enemy->GetPosition().x && character->facingRight);
+		return (uint8_t)(facing && distance < 1000.f);
 	}
 	void Update() override {
 		if (isKeyPressed(VK_ESCAPE))
@@ -99,9 +80,25 @@ public:
 			nLevel = Level::ManageLevel::NextLevel;
 	}
 	inline void SaveData() {
-		s.OverWrite("Coins: " + std::to_string(coins.nAmount) + "\n", s.GetNewLine(5));
+		if (s.isEmpty()) {
+			s.OverWrite("Speed: " + std::to_string(character->GetSpeed()) + "\n");
+			s.OverWrite("Health: " + std::to_string(character->GetHealth()) + "\n", s.GetNewLine(1));
+			s.OverWrite("Increment: " + std::to_string((int)nCoinIncrement) + "\n", s.GetNewLine(2));
+			s.OverWrite("Max Waves: " + std::to_string((int)w.nMaxNumber) + "\n", s.GetNewLine(3));
+			s.OverWrite("Coins: " + std::to_string(coins.nAmount) + "\n", s.GetNewLine(4));
+			return;
+		}
+		s.OverWrite("Coins: " + std::to_string(coins.nAmount) + "\n", s.GetNewLine(4));
 	}
 	inline void LoadData() {
+		if (s.isEmpty()) {
+			nSpeed = 10.f;
+			nHealth = 300.f;
+			nCoinIncrement = 1;
+			nMaxWaves = 5;
+			coins.SetAmount(0);
+			return;
+		}
 		nSpeed = atoi(s.ReadBetween(s.FindEnd("Speed: "), s.GetNewLine(2)-1).c_str());
 		nHealth = atoi(s.ReadBetween(s.FindEnd("Health: "), s.GetNewLine(3) - 1).c_str());
 		nCoinIncrement = atoi(s.ReadBetween(s.FindEnd("Increment: "), s.GetNewLine(4)-1).c_str());
@@ -113,7 +110,7 @@ public:
 			return;
 		}
 		int nEnemyNumber = (pauseFile.GetLineBreaks() - 7) / 4;
-		int index = 2;
+		int index = 1;
 		if (nEnemyNumber != 0)
 			for (int i = 0; i < nEnemyNumber; i++) {
 				w.enemies.push_back(std::make_unique<Enemy>("eAttack", "eMove", "eIdle", "eDead"));
@@ -134,7 +131,7 @@ public:
 		pauseFile.Clear();
 	}
 	inline void PauseGame() {
-		int index = 1;
+		int index = 0;
 		for (int i = 0; i < w.enemies.size(); i++) {
 			pauseFile.OverWrite("Enemy " + std::to_string(i) + " Position: " + w.enemies[i]->GetPosition().toString() + "\n", pauseFile.GetNewLine(index));
 			pauseFile.OverWrite("Enemy " + std::to_string(i) + " State: " + std::string(w.enemies[i]->GetState()) + "\n", pauseFile.GetNewLine(index + 1));
@@ -151,6 +148,25 @@ public:
 		pauseFile.OverWrite("Wave State: " + std::to_string((int)w.waveStates) + "\n", pauseFile.GetNewLine(index + 6));
 		nLevel = Level::ManageLevel::GotoLevel;
 		nIndex = 6;
+	}
+	void UnLoad() override {
+		FreeFontData();
+		SaveData();
+		s.UpdateFile();
+		pauseFile.UpdateFile();
+		chest.Free();
+		mRect.Free();
+		character->Destroy();
+		character.reset();
+		w.text.Free();
+		if (!w.enemies.empty())
+			for (int i = 0; i < w.enemies.size(); i++) {
+				w.enemies[i]->Destroy();
+				w.enemies[i].reset();
+				w.enemies.erase(w.enemies.begin() + i);
+			}
+		w.enemies.clear();
+		coins.Free();
 	}
 private:
 	SaveFile s, pauseFile;
@@ -344,18 +360,18 @@ public:
 		buy.Free();
 	}
 	inline void LoadData() {
-		vItems[0].SetLevel(vItems[0].FindValue(atof(s.ReadBetween(s.FindEnd("Speed: "), s.GetNewLine(2) - 1).c_str())));
-		vItems[1].SetLevel(vItems[1].FindValue(atof(s.ReadBetween(s.FindEnd("Health: "), s.GetNewLine(3) - 1).c_str())));
-		vItems[2].SetLevel(vItems[2].FindValue(atoi(s.ReadBetween(s.FindEnd("Increment: "), s.GetNewLine(4)- 1).c_str())));
-		vItems[3].SetLevel(vItems[3].FindValue(atoi(s.ReadBetween(s.FindEnd("Max Waves: "), s.GetNewLine(5) - 1).c_str())));
-		c.SetAmount(atoi(s.ReadBetween(s.FindEnd("Coins: "), s.GetNewLine(6) - 1).c_str()));
+		vItems[0].SetLevel(vItems[0].FindValue(atof(s.ReadBetween(s.FindEnd("Speed: "), s.GetNewLine(1) - 1).c_str())));
+		vItems[1].SetLevel(vItems[1].FindValue(atof(s.ReadBetween(s.FindEnd("Health: "), s.GetNewLine(2) - 1).c_str())));
+		vItems[2].SetLevel(vItems[2].FindValue(atoi(s.ReadBetween(s.FindEnd("Increment: "), s.GetNewLine(3)- 1).c_str())));
+		vItems[3].SetLevel(vItems[3].FindValue(atoi(s.ReadBetween(s.FindEnd("Max Waves: "), s.GetNewLine(4) - 1).c_str())));
+		c.SetAmount(atoi(s.ReadBetween(s.FindEnd("Coins: "), s.GetNewLine(5) - 1).c_str()));
 	}
 	inline void SaveData() {
 		s.OverWrite("Speed: " + std::to_string(vItems[0].GetCurrentValue()) + "\n");
-		s.OverWrite("Health: " + std::to_string(vItems[1].GetCurrentValue()) + "\n", s.GetNewLine(2));
-		s.OverWrite("Increment: " + std::to_string((int)vItems[2].GetCurrentValue()) + "\n", s.GetNewLine(3));
-		s.OverWrite("Max Waves: " + std::to_string((int)vItems[3].GetCurrentValue()) + "\n", s.GetNewLine(4));
-		s.OverWrite("Coins: " + std::to_string(c.nAmount) + "\n", s.GetNewLine(5));
+		s.OverWrite("Health: " + std::to_string(vItems[1].GetCurrentValue()) + "\n", s.GetNewLine(1));
+		s.OverWrite("Increment: " + std::to_string((int)vItems[2].GetCurrentValue()) + "\n", s.GetNewLine(2));
+		s.OverWrite("Max Waves: " + std::to_string((int)vItems[3].GetCurrentValue()) + "\n", s.GetNewLine(3));
+		s.OverWrite("Coins: " + std::to_string(c.nAmount) + "\n", s.GetNewLine(4));
 	}
 private:
 	SaveFile s;
