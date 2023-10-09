@@ -61,7 +61,7 @@ public:
 		float angle = GetAngle(position, characterPosition);
 		float t = elapsedTime * speed;
 		t = Smoothstep(0.0f, 20.0f, t);
-		position -= toVector(angle) * t * 20.0f;
+		position -= toVector(angle) * t * 30.0f;
 	};
 	std::function<void()> Attack = [&, this]() {
 		switch (attackStates) {
@@ -69,10 +69,11 @@ public:
 			nDamage = 10.f;
 			attackStates = AttackStates::Cooldown;
 		}
-									  break;
+									   break;
 		case AttackStates::Cooldown: {
 			nDamage = 0.f;
-			if (AnimEnd()) attackStates = AttackStates::DamagePlayer;
+			if (AnimEnd() && characterPosition.GetDistance(position) < 1000.f)
+				attackStates = AttackStates::DamagePlayer;
 		}
 								   break;
 		}};
@@ -87,16 +88,17 @@ public:
 		characterPosition = pos;
 		if (health <= 0.f) SetState("Dead");
 		if (isState("Dead") && AnimEnd()) bDead = true;
-		float distance = Abs(characterPosition.GetDistance(position));
-		if (!bEnteredBounds || (distance < 7000.0f && distance > 550.0f)) stateMachine.SetState("Follow");
-		else if (distance >= 7000.0f) stateMachine.SetState("Idle");
-		else if (distance <= 550.0f) stateMachine.SetState("Attack");
-		this->elapsedTime += 0.01f;
-		if (!stateMachine.equals("Attack")) {
-			position.y += smoothSin(this->elapsedTime, 1.5f, 6.0f);
+		float distance = characterPosition.GetDistance(position);
+		if (!bEnteredBounds || (distance < 7000.0f && distance > 550.0f)) SetState("Follow");
+		else if (distance >= 7000.0f) SetState("Idle");
+		else if (distance <= 550.0f) SetState("Attack");
+		elapsedTime += 0.01f;
+		if (!isState("Attack")) {
+			nDamage = 0.f;
+			position.y += smoothSin(elapsedTime, 1.5f, 6.0f);
 			m_time += m_deltaTime;
 		}
-		this->facingRight = (position.x > characterPosition.x) ? true : false;
+		facingRight = (position.x > characterPosition.x) ? true : false;
 		stateMachine.UpdateState();
 	}
 	void Destroy() override {
@@ -107,7 +109,7 @@ public:
 		std::destroy_at(std::addressof(Attack));
 		std::destroy_at(std::addressof(Idle));
 	}
-	virtual ~Enemy(){}
+	virtual ~Enemy() {}
 	enum class AttackStates {
 		DamagePlayer,
 		Cooldown,

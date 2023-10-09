@@ -19,6 +19,10 @@ inline T SelectRandomly(T start, T end) {
 	return SelectRandomly(start, end, gen);
 }
 
+template<class T, class U> bool IsSameType(U obj) {
+	return dynamic_cast<T>(obj) != nullptr;
+}
+
 struct Powerup {
 	float timeLasting;
 	std::function<void()> mEffect;
@@ -36,7 +40,7 @@ struct Powerup {
 	void Free() {
 		std::destroy_at(std::addressof(mEffect));
 		std::destroy_at(std::addressof(mEnd));
-		if(mIcon.mTexture.texture != nullptr) mIcon.Free();
+		if (mIcon.mTexture.texture != nullptr) mIcon.Free();
 	}
 };
 
@@ -56,10 +60,10 @@ struct Chest {
 		mSprite.SetTexture(mAnimator->GetByIndex(0).frame);
 		mSprite.SetPosition({ 3800, 2100 });
 		text = Text("Press 'E' to open.", { 0, 0 }, 0.02f);
-		text.SetPosition(mSprite.position + Vec2f(0, 800) + ToScreenCoord({512 - text.GetStringSize(), 368}));
+		text.SetPosition(mSprite.position + Vec2f(0, 800) + ToScreenCoord({ 512 - text.GetStringSize(), 368 }));
 	}
 	void Update(bool bCanOpen, Vec2f characterPosition, float ticks = 150.f) {
-		if(!bNoPowerup && currentPowerup.mEffect && currentPowerup.mEnd) {
+		if (!bNoPowerup && currentPowerup.mEffect && currentPowerup.mEnd) {
 			if (currentPowerup.timeLasting > 0)
 				currentPowerup.mEffect();
 			if (currentPowerup.timeLasting <= 0) {
@@ -96,7 +100,7 @@ struct Chest {
 				text.DrawString();
 		}
 		if (bChestOpened) {
-			if (currentPowerup.mIcon.position.y < mSprite.position.y + 900)
+			if (currentPowerup.mIcon.position.y < mSprite.position.y + 765)
 				currentPowerup.mIcon.SetPosition(currentPowerup.mIcon.position + Vec2f(0, 45));
 			currentPowerup.mIcon.Draw();
 		}
@@ -109,7 +113,7 @@ struct Chest {
 		mAnimator->Free();
 		mSprite.Free();
 		delete mAnimator;
-		if (bNoPowerup || !currentPowerup.mEffect) return;	
+		if (bNoPowerup || !currentPowerup.mEffect) return;
 		currentPowerup.Free();
 	}
 };
@@ -135,7 +139,7 @@ struct WaveSystem {
 		nWaveNumber = 0;
 		srand(time(0));
 		text = Text("Wave " + std::to_string(nWaveNumber), { 0, 0 }, 0.03f);
-		text.SetPosition(ToScreenCoord({512-text.GetStringSize(), 6})); 
+		text.SetPosition(ToScreenCoord({ 512 - text.GetStringSize(), 6 }));
 	}
 	void SetWave(int waveNumber, WaveStates state, int nSpawned) {
 		text.SetText("Wave " + std::to_string(waveNumber));
@@ -147,25 +151,17 @@ struct WaveSystem {
 	void Update(Vec2f characterPosition, float nDeltaTime = 150.f) {
 		assert(waveNumber <= maxNumber);
 		switch (waveStates) {
-		case WaveStates::Cooldown:{
-			if (text.color != Structures::Color(.5f, .5f, .5f, 1.f))
-				text.SetColor(Structures::Color(.5f, .5f, .5f, 1.f));
+		case WaveStates::Cooldown: {
 			waveCooldown -= nDeltaTime;
 			if (nMaxNumber > nWaveNumber && waveCooldown <= 0) {
-				nWaveNumber++;
-				nCurrentSpawnNumber = 0;
-				text.SetText("Wave " + std::to_string(nWaveNumber));
-				text.SetPosition(ToScreenCoord({ 512 - text.GetStringSize(), 6 }));
 				waveCooldown = 60000;
-				waveStates = WaveStates::Spawning;
+				SetWave(nWaveNumber+1, WaveStates::Spawning, 0);
 			}
-			else if(nMaxNumber == nWaveNumber && waveCooldown <= 0)
+			else if (nMaxNumber == nWaveNumber && waveCooldown <= 0)
 				bFinished = true;
 		}
-								break;
+								 break;
 		case WaveStates::Spawning: {
-			if (text.color != Structures::Color(1.f, 1.f, 1.f, 1.f))
-				text.SetColor(Structures::Color(1.f, 1.f, 1.f, 1.f));
 			enemies.push_back(std::make_unique<Enemy>("eAttack", "eMove", "eIdle", "eDead"));
 			enemies.back()->SetPosition(SelectSpawnPosition(characterPosition));
 			nCurrentSpawnNumber++;
@@ -173,15 +169,11 @@ struct WaveSystem {
 		}
 								 break;
 		case WaveStates::Waiting: {
-			if (text.color != Structures::Color(1.f, 1.f, 1.f, 1.f))
-				text.SetColor(Structures::Color(1.f, 1.f, 1.f, 1.f));
 			spawnRate -= nDeltaTime;
 			if (spawnRate <= 0) {
 				spawnRate = 30000;
-				if (nWaveNumber+1 >= nCurrentSpawnNumber) waveStates = WaveStates::Spawning;
-				else 
-					if(enemies.empty())
-						waveStates = WaveStates::Cooldown;
+				if (nWaveNumber + 1 >= nCurrentSpawnNumber) waveStates = WaveStates::Spawning;
+				else if (enemies.empty()) waveStates = WaveStates::Cooldown;
 			}
 		}
 								break;
@@ -193,6 +185,18 @@ struct WaveSystem {
 		return { x, y };
 	}
 	void Render() {
+		switch (waveStates) {
+		case WaveStates::Spawning: case WaveStates::Waiting: {
+			if (text.color != Structures::Color(1.f, 1.f, 1.f, 1.f))
+				text.SetColor(Structures::Color(1.f, 1.f, 1.f, 1.f));
+		}
+								 break;
+		case WaveStates::Cooldown: {
+			if (text.color != Structures::Color(.5f, .5f, .5f, 1.f))
+				text.SetColor(Structures::Color(.5f, .5f, .5f, 1.f));
+		}
+								 break;
+		}
 		text.DrawString();
 	}
 };
@@ -201,7 +205,7 @@ struct Coins {
 	int nAmount;
 	Text mText;
 	Coins() {
-		mText = Text("$000", ToScreenCoord({ 875, 6}), 0.03f);
+		mText = Text("$000", ToScreenCoord({ 875, 6 }), 0.03f);
 		SetAmount(0);
 	}
 	void SetAmount(int amount) {
@@ -243,7 +247,7 @@ struct Item {
 		sDescription = Text(nDescription, { 0, 0 }, 0.03f);
 		sDescription.SetPosition(ToScreenCoord({ 512 - sDescription.GetStringSize(), 400 }));
 		sPrice = Text("$2", { 0, 0 }, 0.03f);
-		sPrice.SetPosition(ToScreenCoord({512-sDescription.GetStringSize(), 550}));
+		sPrice.SetPosition(ToScreenCoord({ 512 - sDescription.GetStringSize(), 550 }));
 	}
 	void SetIndex(int index) {
 		assert(nValueIndex != index);
@@ -264,8 +268,8 @@ struct Item {
 	void SetLevel(int index) {
 		SetIndex(index);
 		SetPrice(2 << index);
-		sLevel.SetText("Level " + std::to_string(nValueIndex+1));
-		sLevel.SetPosition(ToScreenCoord({512-sLevel.GetStringSize(), 475}));
+		sLevel.SetText("Level " + std::to_string(nValueIndex + 1));
+		sLevel.SetPosition(ToScreenCoord({ 512 - sLevel.GetStringSize(), 475 }));
 	}
 	void Free() {
 		vValues.clear();

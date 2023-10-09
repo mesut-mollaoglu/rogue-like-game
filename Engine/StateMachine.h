@@ -12,7 +12,7 @@ enum class MouseWheel {
 
 enum class Mouse {
 	LeftMouseButton = 0,
-	MiddleMouseButton = 1, 
+	MiddleMouseButton = 1,
 	RightMouseButton = 2,
 	Unknown = 3
 };

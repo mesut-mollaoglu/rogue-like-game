@@ -36,7 +36,7 @@ public:
 				w.enemies[i]->health = 0;
 			if (character->isState("Attack") && CheckCollision(w.enemies[i].get()))
 				w.enemies[i]->health -= character->nDamage;
-			if (bDamageEnabled && w.enemies[i]->isState("Attack") && character->GetPosition().GetDistance(w.enemies[i]->GetPosition()) < 1000.f)
+			if (bDamageEnabled && w.enemies[i]->nDamage != 0.f)
 				character->SetHealth(character->GetHealth() - w.enemies[i]->nDamage);
 			if (w.enemies[i]->bDead) {
 				w.enemies[i]->Destroy();
@@ -99,11 +99,11 @@ public:
 			coins.SetAmount(0);
 			return;
 		}
-		nSpeed = atoi(s.ReadBetween(s.FindEnd("Speed: "), s.GetNewLine(2)-1).c_str());
+		nSpeed = atoi(s.ReadBetween(s.FindEnd("Speed: "), s.GetNewLine(2) - 1).c_str());
 		nHealth = atoi(s.ReadBetween(s.FindEnd("Health: "), s.GetNewLine(3) - 1).c_str());
-		nCoinIncrement = atoi(s.ReadBetween(s.FindEnd("Increment: "), s.GetNewLine(4)-1).c_str());
-		nMaxWaves = atoi(s.ReadBetween(s.FindEnd("Max Waves: "), s.GetNewLine(5)-1).c_str());
-		coins.SetAmount(atoi(s.ReadBetween(s.FindEnd("Coins: "), s.GetNewLine(6)-1).c_str()));
+		nCoinIncrement = atoi(s.ReadBetween(s.FindEnd("Increment: "), s.GetNewLine(4) - 1).c_str());
+		nMaxWaves = atoi(s.ReadBetween(s.FindEnd("Max Waves: "), s.GetNewLine(5) - 1).c_str());
+		coins.SetAmount(atoi(s.ReadBetween(s.FindEnd("Coins: "), s.GetNewLine(6) - 1).c_str()));
 	}
 	inline void ResumeGame() {
 		if (pauseFile.isEmpty()) {
@@ -191,7 +191,7 @@ public:
 		LoadFontData();
 		paused = Text("Paused");
 		paused.SetPosition(ToScreenCoord({ 512 - paused.GetStringSize(), 40 }));
-		home = Button([&, this]() {nLevel = Level::ManageLevel::GotoLevel; nIndex = 0; }, "MenuContent\\homeIcon.png", ToScreenCoord({312, 384}));
+		home = Button([&, this]() {nLevel = Level::ManageLevel::GotoLevel; nIndex = 0; }, "MenuContent\\homeIcon.png", ToScreenCoord({ 312, 384 }));
 		resume = Button([&, this]() {nLevel = Level::ManageLevel::GotoLevel; nIndex = 1; }, "MenuContent\\resumeIcon.png", ToScreenCoord({ 712, 384 }));
 	}
 	void UnLoad() override {
@@ -201,14 +201,14 @@ public:
 		resume.Free();
 	}
 	void Update() override {
-		
+
 	}
 	void FixedUpdate() override {
 		resume.Update();
 		home.Update();
 	}
 	void Render() override {
-		Graphics::ClearAndBegin({0.f, 0.f, 0.f, 1.f});
+		Graphics::ClearAndBegin({ 0.f, 0.f, 0.f, 1.f });
 		home.Draw();
 		resume.Draw();
 		paused.DrawString();
@@ -309,10 +309,10 @@ public:
 	}
 	void Load() override {
 		s = SaveFile("NewFile.txt");
-		LoadFontData();		
+		LoadFontData();
 		nItemIndex = 0;
 		c = Coins();
-		vItems = { Item("Powerups\\fastRun.png", "Increases Walking Speed.", {10, 15, 20, 25}), 
+		vItems = { Item("Powerups\\fastRun.png", "Increases Walking Speed.", {10, 15, 20, 25}),
 			Item("Powerups\\health.png", "Increases Maximum Health.", {300, 400, 500, 600}),
 			Item("Powerups\\moneyIcon.png", "Amount of money you earn by killing enemies.", {1, 2, 3, 4, 5}),
 			Item("Powerups\\waveIcon.png", "Max number of waves.", {5, 8, 11, 14, 17}) };
@@ -320,7 +320,7 @@ public:
 		back = Button([&, this]() { nLevel = Level::ManageLevel::GotoLevel; nIndex = 0; }, "newMenu\\back.png", ToScreenCoord({ 920, 700 }), 0.5f);
 		left = Button([&, this]() {if (GetTimeLapse(Clock::now(), tp1) < .5f) return; if (nItemIndex > 0) nItemIndex--; tp1 = Clock::now(); }, "marketUI\\left.png", ToScreenCoord({ 64, 368 }), 1.f);
 		right = Button([&, this]() {if (GetTimeLapse(Clock::now(), tp1) < .5f) return; if (nItemIndex < vItems.size() - 1) nItemIndex++; tp1 = Clock::now(); }, "marketUI\\right.png", ToScreenCoord({ 960, 368 }), 1.f);
-		buy = Button([&, this]() {if (GetTimeLapse(Clock::now(), tp2) < .5f || c.nAmount < (2 << vItems[nItemIndex].nValueIndex)) return; 
+		buy = Button([&, this]() {if (GetTimeLapse(Clock::now(), tp2) < .5f || c.nAmount < (2 << vItems[nItemIndex].nValueIndex)) return;
 		if (vItems[nItemIndex].vValues.size() > (uint64_t)vItems[nItemIndex].nValueIndex + 1) c.SetAmount(c.nAmount - (2 << vItems[nItemIndex].nValueIndex)); vItems[nItemIndex].SetLevel(vItems[nItemIndex].nValueIndex + 1);
 		tp2 = Clock::now(); }, "marketUI\\buy.png", ToScreenCoord({ 512, 700 }), .5f);
 		Graphics::SetStates();
@@ -331,7 +331,7 @@ public:
 		vItems[nItemIndex].mIcon.Draw();
 		vItems[nItemIndex].sDescription.DrawString();
 		vItems[nItemIndex].sLevel.DrawString();
-		if(vItems[nItemIndex].vValues.size() > (uint64_t)vItems[nItemIndex].nValueIndex+1) 
+		if (vItems[nItemIndex].vValues.size() > (uint64_t)vItems[nItemIndex].nValueIndex + 1)
 			vItems[nItemIndex].sPrice.DrawString();
 		left.Draw();
 		right.Draw();
@@ -346,7 +346,7 @@ public:
 		buy.Update();
 	}
 	void Update() override {
-		
+
 	}
 	void UnLoad() override {
 		FreeFontData();
@@ -362,7 +362,7 @@ public:
 	inline void LoadData() {
 		vItems[0].SetLevel(vItems[0].FindValue(atof(s.ReadBetween(s.FindEnd("Speed: "), s.GetNewLine(1) - 1).c_str())));
 		vItems[1].SetLevel(vItems[1].FindValue(atof(s.ReadBetween(s.FindEnd("Health: "), s.GetNewLine(2) - 1).c_str())));
-		vItems[2].SetLevel(vItems[2].FindValue(atoi(s.ReadBetween(s.FindEnd("Increment: "), s.GetNewLine(3)- 1).c_str())));
+		vItems[2].SetLevel(vItems[2].FindValue(atoi(s.ReadBetween(s.FindEnd("Increment: "), s.GetNewLine(3) - 1).c_str())));
 		vItems[3].SetLevel(vItems[3].FindValue(atoi(s.ReadBetween(s.FindEnd("Max Waves: "), s.GetNewLine(4) - 1).c_str())));
 		c.SetAmount(atoi(s.ReadBetween(s.FindEnd("Coins: "), s.GetNewLine(5) - 1).c_str()));
 	}
@@ -394,12 +394,12 @@ public:
 	void Load() override {
 		LoadFontData();
 		text = Text("Win");
-		text.SetPosition(ToScreenCoord({512-text.GetStringSize(), 40}));
-		next = Button([&, this]() {nLevel = Level::ManageLevel::GotoLevel; nIndex = 0; }, "newMenu\\next.png", ToScreenCoord({512, 700}), 0.5f);
+		text.SetPosition(ToScreenCoord({ 512 - text.GetStringSize(), 40 }));
+		next = Button([&, this]() {nLevel = Level::ManageLevel::GotoLevel; nIndex = 0; }, "newMenu\\next.png", ToScreenCoord({ 512, 700 }), 0.5f);
 		Graphics::SetStates();
 	}
 	void Render() override {
-		Graphics::ClearAndBegin({0.f, 0.f, 0.f, 1.f});
+		Graphics::ClearAndBegin({ 0.f, 0.f, 0.f, 1.f });
 		text.DrawString();
 		next.Draw();
 		Graphics::End();
@@ -427,11 +427,11 @@ public:
 		ticks = 150;
 	}
 	void Load() override {
-		button = Button([&, this]() { nLevel = Level::ManageLevel::PrevLevel; }, "MenuContent\\restart.png", ToScreenCoord({312, 384}));
+		button = Button([&, this]() { nLevel = Level::ManageLevel::PrevLevel; }, "MenuContent\\restart.png", ToScreenCoord({ 312, 384 }));
 		home = Button([&, this]() {nLevel = Level::ManageLevel::GotoLevel; nIndex = 0; }, "MenuContent\\homeIcon.png", ToScreenCoord({ 712, 384 }));
 		LoadFontData();
 		text = Text("You Died");
-		text.SetPosition(ToScreenCoord({512-text.GetStringSize(), 40}));
+		text.SetPosition(ToScreenCoord({ 512 - text.GetStringSize(), 40 }));
 		Graphics::SetStates();
 	}
 	void Render() override {

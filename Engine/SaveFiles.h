@@ -37,7 +37,7 @@ public:
                     str += id[j];
                 }
             }
-            else if(i > nLocation) {
+            else if (i > nLocation) {
                 if (i == nLocation + 1)
                     str += sContent[i - 1];
                 str += sContent[i];
@@ -87,7 +87,7 @@ public:
             nLocation = sContent.size();
         std::string str;
         for (std::size_t i = 0; i < sContent.size(); ++i)
-            if (i >= nLocation && i < nLocation + nSize) 
+            if (i >= nLocation && i < nLocation + nSize)
                 str += sContent[i];
         return str;
     }
@@ -114,8 +114,8 @@ public:
         sContent.append(str);
     }
     std::size_t Find(const std::string& id) {
-        for (std::size_t i = 0; i < sContent.size(); ++i) 
-            if (strcmp(sContent.substr(i, id.size()).c_str(), id.c_str()) == 0) 
+        for (std::size_t i = 0; i < sContent.size(); ++i)
+            if (strcmp(sContent.substr(i, id.size()).c_str(), id.c_str()) == 0)
                 return i;
         return std::string::npos;
     }

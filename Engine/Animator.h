@@ -45,7 +45,7 @@ public:
 			start = Clock::now();
 			index += bReverse ? -1 : 1;
 			index %= frames.size();
-			if (notPlayed && index == frames.size()-1) notPlayed = false;
+			if (notPlayed && index == frames.size() - 1) notPlayed = false;
 			currentFrame = frames[index];
 		}
 		return currentFrame.frame;
@@ -81,7 +81,7 @@ public:
 		index = ind;
 	}
 	void Free() {
-		if(!frames.empty())
+		if (!frames.empty())
 			for (auto frame : frames) {
 				frame.frame.Free();
 				frame.~Frame();

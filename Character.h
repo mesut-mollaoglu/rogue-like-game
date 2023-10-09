@@ -6,7 +6,7 @@ class Character {
 public:
     Character(std::string idleFrames, std::string walkingFrames, std::string hitFrames, std::string dashFrames, float maxHealth = 300) {
         mHealth = HealthBar(maxHealth, maxHealth, 0);
-        mHealth.SetPosition({ ToScreenCoord({120, 30})});
+        mHealth.SetPosition({ ToScreenCoord({120, 30}) });
         mHealth.SetTexture(Graphics::LoadTexture("healthbar.png"), .25f);
         SetHealth(maxHealth);
         stateMachine.AddState(walking, new Animator(Graphics::LoadFromDir(walkingFrames), 250), "Walking", { 'W', 'A', 'S', 'D' });
@@ -72,7 +72,7 @@ public:
         switch (attackStates) {
         case AttackStates::DamageEnemy: {
             nDamage = 10.f;
-            attackStates = AttackStates::Cooldown; 
+            attackStates = AttackStates::Cooldown;
         }
                                       break;
         case AttackStates::Cooldown: {
