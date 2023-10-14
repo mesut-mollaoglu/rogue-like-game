@@ -196,15 +196,16 @@ public:
 class StateMachine : public BaseStateMachine {
 public:
 	void AddStateComb(std::function<void()> func, Animator* anim, std::string name, std::vector<Key> keys, float cooldown = 0) {
-		StateController* controller = new StateController(func, anim, name, keys, cooldown / 1000);
-		states.push_back(*controller);
-		mCurrentState = *controller;
-		delete controller;
+		states.push_back(StateController(func, anim, name, keys, cooldown / 1000));
+		mCurrentState = states.back();
 	}
 	void AddState(std::function<void()> func, Animator* anim, std::string name, std::vector<char> keys, float cooldown = 0) {
 		std::vector<Key> container;
 		std::for_each(keys.begin(), keys.end(), [&, this](char& a) {container.push_back(a); });
 		AddStateComb(func, anim, name, container, cooldown);
+		for (auto& key : container)
+			key.keys.clear();
+		container.clear();
 	}
 	void UpdateState() {
 		std::for_each(states.begin(), states.end(), [&, this](StateController& state) {state.Update(); });
@@ -234,10 +235,8 @@ public:
 class AIStateMachine : public BaseStateMachine {
 public:
 	void AddState(std::function<void()> func, Animator* anim, std::string name, float cooldown = 0) {
-		StateController* controller = new StateController(func, anim, name, {}, cooldown / 1000);
-		states.push_back(*controller);
-		delete controller;
-		mCurrentState = states[0];
+		states.push_back(StateController(func, anim, name, {}, cooldown / 1000));
+		mCurrentState = states.back();
 	}
 	void UpdateState() {
 		std::for_each(states.begin(), states.end(), [&, this](StateController& state) {state.Update(); });

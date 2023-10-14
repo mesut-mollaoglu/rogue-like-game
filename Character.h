@@ -4,17 +4,16 @@
 
 class Character {
 public:
-    Character(std::string idleFrames, std::string walkingFrames, std::string hitFrames, std::string dashFrames, float maxHealth = 300) {
+    Character(float maxHealth = 300) {
         mHealth = HealthBar(maxHealth, maxHealth, 0);
         mHealth.SetPosition({ ToScreenCoord({120, 30}) });
-        mHealth.SetTexture(Graphics::LoadTexture("healthbar.png"), .25f);
+        mHealth.SetTexture(Graphics::LoadTexture("Assets\\UI\\healthbar.png"), .25f);
         SetHealth(maxHealth);
-        stateMachine.AddState(walking, new Animator(Graphics::LoadFromDir(walkingFrames), 250), "Walking", { 'W', 'A', 'S', 'D' });
+        stateMachine.AddState(walking, new Animator(Graphics::LoadFromDir("Assets\\Character\\walkingAnim"), 250), "Walking", { 'W', 'A', 'S', 'D' });
         MapKeyBoard();
-        stateMachine.AddState(idle, new Animator(Graphics::LoadFromDir(idleFrames), 250), "Idle", {});
-        stateMachine.AddState(dash, new Animator(Graphics::LoadFromDir(dashFrames), 50, true), "Dash", { VK_SHIFT }, 2000);
-        stateMachine.AddState(attack, new Animator(Graphics::LoadFromDir(hitFrames), 125, true), "Attack", { VK_LBUTTON });
-        stateMachine.SetState("Idle");
+        stateMachine.AddState(dash, new Animator(Graphics::LoadFromDir("Assets\\Character\\dashAnim"), 50, true), "Dash", { VK_SHIFT }, 2000);
+        stateMachine.AddState(attack, new Animator(Graphics::LoadFromDir("Assets\\Character\\attackAnim"), 125, true), "Attack", { VK_LBUTTON });
+        stateMachine.AddState(idle, new Animator(Graphics::LoadFromDir("Assets\\Character\\idleAnim"), 250), "Idle", {});
         rect = Sprite();
     }
     void MapKeyBoard() {

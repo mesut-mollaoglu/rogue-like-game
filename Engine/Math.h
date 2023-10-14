@@ -39,8 +39,11 @@ struct Vector2D {
         x *= k;
         y *= k;
     }
+    inline bool operator==(Vector2D<T> vec) {
+        return x == vec.x && y == vec.y;
+    }
     inline bool operator!=(Vector2D<T> vec) {
-        return !(*this == vec);
+        return x != vec.y || y != vec.y;
     }
     Vector2D<T> operator*(T k) {
         Vector2D<T> ret;

@@ -18,7 +18,7 @@ inline void LoadFontData(float width = 1024) {
    std::ifstream fin;
    int i;
    char temp;
-   fin.open("Engine\\FontFiles\\font01.txt");
+   fin.open("Assets\\Font\\font01.txt");
    for (i = 0; i < 95; i++)
    {
 	   fin.get(temp);
@@ -114,7 +114,9 @@ typedef struct Sprite {
    ID3D11Buffer* indexBuffer;
    Vec2f position;
    Structures::Texture mTexture;
+   float sizeMultiplier;
    Sprite() {
+	   sizeMultiplier = 1.f;
 	   position = Vec2f();
 	   std::vector<DWORD> indices = { 0, 1, 2, 0, 3, 1 };
 	   Graphics::CreateIndexBuffer(indexBuffer, indices);
@@ -126,9 +128,11 @@ typedef struct Sprite {
 	   position = pos;
 	   Graphics::MapConstantBuffer<Structures::Constants>(constantBuffer, { {position.x / Window::width, position.y / Window::height}, {1, 1}, {0, 0, 0, 0} });
    }
-   void SetTexture(Structures::Texture tex, float sizeMultiplier = 1.0f) {
-	   if (mTexture.texture == nullptr || mTexture.width != tex.width || mTexture.height != tex.height)
-		   Graphics::MapVertexBuffer(vertexBuffer, GetRotatedVertex(sizeMultiplier * tex.width / tex.height, sizeMultiplier, 0.0f, 0.0f, 1.0f));
+   void SetTexture(Structures::Texture tex, float multiplier = 1.0f) {
+	   if (mTexture.width != tex.width || mTexture.height != tex.height || multiplier != sizeMultiplier) {
+		   Graphics::MapVertexBuffer(vertexBuffer, GetRotatedVertex(multiplier * tex.width / tex.height, multiplier, 0.0f, 0.0f, 1.0f));
+		   sizeMultiplier = multiplier;
+	   }
 	   mTexture = tex;
    }
    void Draw(FlipHorizontal mHorizontalFlip = FlipHorizontal::NormalHorizontal, FlipVertical mVerticalFlip = FlipVertical::NormalVertical, ComPtr<ID3D11PixelShader> pixelShader = Graphics::pixelShader) {
@@ -204,7 +208,7 @@ typedef struct Text {
 	   position = pos;
 	   mText = sText;
 	   multiplier = sizeMultiplier;
-	   mFontTex = Graphics::LoadTexture("Engine\\FontFiles\\font01.tga");
+	   mFontTex = Graphics::LoadTexture("Assets\\Font\\font01.tga");
 	   if (Data::fontData == NULL) LoadFontData(mFontTex.width);
 	   Graphics::CreateVertexBuffer(vertexBuffer, BuildVertex(sText));
 	   Graphics::CreateIndexBuffer(indexBuffer, BuildIndex(sText));
@@ -327,14 +331,12 @@ typedef struct Button {
    void Update() {
 	   if (Hover()) {
 		   float multiply = sizeMultiplier * Window::height / Window::width;
-		   Graphics::MapVertexBuffer(mSprite.vertexBuffer, GetRotatedVertex(mSprite.mTexture.width /
-			   mSprite.mTexture.height * multiply * 1.1f, multiply * 1.1f, 0.f, 0.f, 1.f));
+		   mSprite.SetTexture(mSprite.mTexture, multiply * 1.1f);
 		   if (isKeyPressed(VK_LBUTTON)) mFunction();
 	   }
 	   else {
 		   float multiply = sizeMultiplier * Window::height / Window::width;
-		   Graphics::MapVertexBuffer(mSprite.vertexBuffer, GetRotatedVertex(mSprite.mTexture.width /
-			   mSprite.mTexture.height * multiply, multiply, 0.f, 0.f, 1.f));
+		   mSprite.SetTexture(mSprite.mTexture, multiply);
 	   }
    }
    void SetTexture(Structures::Texture image) {

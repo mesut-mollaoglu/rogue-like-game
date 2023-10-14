@@ -55,7 +55,7 @@ struct Chest {
 	Chest() {
 		bChestOpened = false;
 		bNoPowerup = true;
-		mAnimator = new Animator(Graphics::LoadFromDir("chestFrames"), 75, true);
+		mAnimator = new Animator(Graphics::LoadFromDir("Assets\\Chest\\frames"), 75, true);
 		mSprite = Sprite();
 		mSprite.SetTexture(mAnimator->GetByIndex(0).frame);
 		mSprite.SetPosition({ 3800, 2100 });
@@ -119,7 +119,7 @@ struct Chest {
 };
 
 struct WaveSystem {
-	std::vector<std::unique_ptr<Enemy>> enemies;
+	std::vector<std::unique_ptr<Entity>> enemies;
 	bool bFinished;
 	enum class WaveStates {
 		Cooldown = 0,
@@ -130,12 +130,14 @@ struct WaveSystem {
 	float waveCooldown, spawnRate;
 	int nMaxNumber, nWaveNumber;
 	int nCurrentSpawnNumber;
+	std::vector<Entity::FactoryFunction> factories;
 	WaveSystem() = default;
 	WaveSystem(int nMax) {
+		factories = { &RangedEnemy::Create, &Enemy::Create };
 		bFinished = false;
 		nMaxNumber = nMax;
-		spawnRate = 30000;
-		waveCooldown = 60000;
+		spawnRate = 20000;
+		waveCooldown = 40000;
 		nWaveNumber = 0;
 		srand(time(0));
 		text = Text("Wave " + std::to_string(nWaveNumber), { 0, 0 }, 0.03f);
@@ -148,13 +150,13 @@ struct WaveSystem {
 		waveStates = state;
 		nCurrentSpawnNumber = nSpawned;
 	}
-	void Update(Vec2f characterPosition, float nDeltaTime = 150.f) {
+	void Update(float nDeltaTime = 150.f) {
 		assert(waveNumber <= maxNumber);
 		switch (waveStates) {
 		case WaveStates::Cooldown: {
 			waveCooldown -= nDeltaTime;
 			if (nMaxNumber > nWaveNumber && waveCooldown <= 0) {
-				waveCooldown = 60000;
+				waveCooldown = 40000;
 				SetWave(nWaveNumber+1, WaveStates::Spawning, 0);
 			}
 			else if (nMaxNumber == nWaveNumber && waveCooldown <= 0)
@@ -162,8 +164,9 @@ struct WaveSystem {
 		}
 								 break;
 		case WaveStates::Spawning: {
-			enemies.push_back(std::make_unique<Enemy>("eAttack", "eMove", "eIdle", "eDead"));
-			enemies.back()->SetPosition(SelectSpawnPosition(characterPosition));
+			enemies.push_back(GetRandomEntity());
+			if (IsSameType<RangedEnemy*>(enemies.back().get())) enemies.back()->SetState("Spawn");
+			enemies.back()->SetPosition(SelectSpawnPosition(enemies.back().get()));
 			nCurrentSpawnNumber++;
 			waveStates = WaveStates::Waiting;
 		}
@@ -171,7 +174,7 @@ struct WaveSystem {
 		case WaveStates::Waiting: {
 			spawnRate -= nDeltaTime;
 			if (spawnRate <= 0) {
-				spawnRate = 30000;
+				spawnRate = 20000;
 				if (nWaveNumber + 1 >= nCurrentSpawnNumber) waveStates = WaveStates::Spawning;
 				else if (enemies.empty()) waveStates = WaveStates::Cooldown;
 			}
@@ -179,9 +182,20 @@ struct WaveSystem {
 								break;
 		}
 	}
-	Vec2f SelectSpawnPosition(Vec2f characterPosition) {
-		float x = (rand() % 4) & 1 ? -6000 : 6000;
-		float y = rand() % 4200 - 2100;
+	std::unique_ptr<Entity> GetRandomEntity() {
+		Entity::FactoryFunction entity = *SelectRandomly(factories.begin(), factories.end());
+		return entity();
+	}
+	template <class T> Vec2f SelectSpawnPosition(T entity) {
+		float x = 0, y = 0;
+		if (IsSameType<Enemy*>(entity)) {
+			x = (rand() % 4) & 1 ? -6000 : 6000;
+			y = rand() % 4200 - 2100;
+		}
+		else if (IsSameType<RangedEnemy*>(entity)) {
+			x = rand() % 9000 - 4500;
+			y = rand() % 4000 - 2000;
+		}
 		return { x, y };
 	}
 	void Render() {
@@ -199,6 +213,17 @@ struct WaveSystem {
 		}
 		text.DrawString();
 	}
+	void Free() {
+		factories.clear();
+		text.Free();
+		if (!enemies.empty())
+			for (int i = 0; i < enemies.size(); i++) {
+				enemies[i]->Destroy();
+				enemies[i].reset();
+				enemies.erase(enemies.begin() + i);
+			}
+		enemies.clear();
+	}
 };
 
 struct Coins {
@@ -209,9 +234,10 @@ struct Coins {
 		SetAmount(0);
 	}
 	void SetAmount(int amount) {
-		assert(amount != nAmount && amount < 1000);
-		nAmount = amount;
-		std::string sAmount = std::to_string(amount);
+		if (amount < 0) nAmount = 0;
+		else if (amount > 999) nAmount = 999;
+		else nAmount = amount;
+		std::string sAmount = std::to_string(nAmount);
 		std::string sText;
 		int size = 3 - sAmount.size();
 		for (int i = 0; i < size; i++) sText += '0';

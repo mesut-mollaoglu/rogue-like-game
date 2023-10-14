@@ -17,13 +17,9 @@ public:
 	} Frame;
 	Animator() = default;
 	Animator(std::vector<Structures::Texture> images, float duration, bool play = false) {
-		[&, this](std::vector<Structures::Texture> vec) {
-			for (int i = 0; i < vec.size(); i++) {
-				Frame frame = Frame(vec[i], duration);
-				frames.push_back(frame);
-			}
-		}(images);
-		SetCurrentFrame(0);
+		for (int i = 0; i < images.size(); i++) 
+			frames.push_back(Frame(images[i], duration));
+		currentFrame = frames[0];
 		notPlayed = true;
 		playOnce = play;
 		start = std::chrono::high_resolution_clock::now();

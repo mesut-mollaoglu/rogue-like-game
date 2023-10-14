@@ -52,6 +52,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         MessageBoxA(0, "CreateWindowEx failed", "Fatal Error", MB_OK);
         return GetLastError();
     }
+    LoadFontData();
     Graphics::InitDevices();
     Graphics::InitSwapChain();
     Graphics::InitRenderTarget();
@@ -65,8 +66,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         new Dead(),
         new Credits(),
         new Marketplace(),
-        new Win(),
-        new Pause()
+        new Win()
     };
     controller.Load();
     Window::windowMessage.message = WM_NULL;
@@ -81,6 +81,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         }
     }
     controller.Unload();
+    FreeFontData();
     Graphics::swapChain->SetFullscreenState(FALSE, NULL);
     return Window::windowMessage.wParam;
 }

@@ -219,7 +219,6 @@ public:
 		texture->Release();
 		free(testTextureBytes);
 		return tex;
-		tex.Free();
 	}
 	static inline std::vector<Structures::Texture> LoadFromDir(std::string pathName){
 		std::vector<Structures::Texture> images;
@@ -230,10 +229,8 @@ public:
 		if (hFind != INVALID_HANDLE_VALUE) {
 			do {
 				if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-					Structures::Texture image;
 					std::wstring string(fd.cFileName);
-					image = LoadTexture(pathName + "\\" + std::string(string.begin(), string.end()));
-					images.push_back(image);
+					images.push_back(LoadTexture(pathName + "\\" + std::string(string.begin(), string.end())));
 				}
 			} while (::FindNextFile(hFind, &fd));
 			::FindClose(hFind);
