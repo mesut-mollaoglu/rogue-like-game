@@ -121,8 +121,8 @@ public:
 		if ((states[nCurrentIndex].mAnimator->shouldPlayOnce() && !states[nCurrentIndex].mAnimator->isPlayed()) || !states[GetStateIndex(state)].activated) {
 			return;
 		}
-		nPrevIndex = nCurrentIndex;
-		states[nPrevIndex].mAnimator->ResetPlayBool();
+		int prevIndex = nCurrentIndex;
+		states[prevIndex].mAnimator->ResetPlayBool();
 		nCurrentIndex = GetStateIndex(state);
 	}
 	StateController GetCurrentState() {
@@ -140,7 +140,7 @@ public:
 	bool IsCurrentState(std::string state) const {
 		return strcmp(GetState(), state.c_str()) == 0;
 	}
-	int nCurrentIndex, nPrevIndex;
+	int nCurrentIndex;
 	std::vector<StateController> states;
 	void Clear() {
 		for (auto state : states) {
@@ -156,8 +156,7 @@ public:
 class StateMachine : public BaseStateMachine {
 public:
 	void AddState(std::function<void()> func, Animator* anim, std::string name, std::vector<char> keys, float cooldown = 0) {
-		states.push_back(StateController(func, anim, name, keys, cooldown / 1000));
-		nPrevIndex = (states[nCurrentIndex].mAnimator == nullptr) ? states.size() - 1 : nCurrentIndex;
+		states.push_back(StateController(func, anim, name, keys, cooldown / 1000.f));
 		nCurrentIndex = states.size() - 1;
 	}
 	void UpdateState() {
@@ -188,8 +187,7 @@ public:
 class AIStateMachine : public BaseStateMachine {
 public:
 	void AddState(std::function<void()> func, Animator* anim, std::string name, float cooldown = 0) {
-		states.push_back(StateController(func, anim, name, {}, cooldown / 1000));
-		nPrevIndex = (states[nCurrentIndex].mAnimator == nullptr) ? states.size() - 1 : nCurrentIndex;
+		states.push_back(StateController(func, anim, name, {}, cooldown / 1000.f));
 		nCurrentIndex = states.size() - 1;
 	}
 	void UpdateState() {

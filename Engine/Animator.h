@@ -73,7 +73,8 @@ public:
 	void Free() {
 		if (!frames.empty())
 			for (auto frame : frames) {
-				frame.frame.Free();
+				if(frame.frame.texture != nullptr)
+					frame.frame.Free();
 				frame.~Frame();
 			}
 		frames.clear();
