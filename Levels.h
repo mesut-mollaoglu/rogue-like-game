@@ -42,11 +42,11 @@ public:
 		case GameState::GameWorking: {
 			for (int i = 0; i < w.enemies.size(); i++) {
 				w.enemies[i]->Update(character->GetPosition());
-				if (character->isState("Dash") && CheckCollision(w.enemies[i].get()))
+				if (character->IsCurrentState("Dash") && CheckCollision(w.enemies[i].get()))
 					w.enemies[i]->health = 0;
-				if (character->isState("Attack") && CheckCollision(w.enemies[i].get()))
+				if (character->IsCurrentState("Attack") && CheckCollision(w.enemies[i].get()))
 					w.enemies[i]->health -= character->nDamage;
-				if (bDamageEnabled && w.enemies[i]->nDamage != 0.f && !character->isState("Dash"))
+				if (bDamageEnabled && w.enemies[i]->nDamage != 0.f && !character->IsCurrentState("Dash"))
 					character->SetHealth(character->GetHealth() - w.enemies[i]->nDamage);
 				if (w.enemies[i]->bDead && !w.enemies.empty()) {
 					w.enemies[i]->Destroy();

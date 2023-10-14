@@ -24,8 +24,8 @@ public:
 		assert(stateMachine.GetCurrentState().mAnimator->shouldPlayOnce());
 		return stateMachine.GetCurrentState().mAnimator->GetIndex() == stateMachine.GetCurrentState().mAnimator->GetSize() - 2;
 	}
-	bool IsState(std::string state) {
-		return stateMachine.equals(state);
+	bool IsCurrentState(std::string state) {
+		return stateMachine.IsCurrentState(state);
 	}
 	void SetPosition(Vec2f fPos) {
 		position = fPos;
@@ -100,7 +100,7 @@ public:
 		else if (distance >= 7000.0f) SetState("Idle");
 		else if (distance <= 550.0f) SetState("Attack");
 		elapsedTime += 0.01f;
-		if (!IsState("Attack")) {
+		if (!IsCurrentState("Attack")) {
 			nDamage = 0.f;
 			position.y += smoothSin(elapsedTime, 1.5f, 6.0f);
 			m_time += m_deltaTime;
@@ -207,7 +207,7 @@ public:
 		rect.SetPosition(GetPosition());
 		rect.SetTexture(stateMachine.RenderState());
 		rect.Draw();
-		if (IsState("Attack")) energyBall.Render();
+		if (IsCurrentState("Attack")) energyBall.Render();
 	}
 	void Destroy() override {
 		energyBall.Destroy();

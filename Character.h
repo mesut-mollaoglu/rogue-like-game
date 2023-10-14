@@ -30,7 +30,7 @@ public:
             stateMachine.SetState("Idle");
         }
         for (auto& p : vKeyMap)
-            if (p.first.isPressed() && InBounds()) {
+            if (isKeyPressed(p.first) && InBounds()) {
                 prevPosition = position;
                 position += p.second * speed;
                 if (p.second.x == -1 && !facingRight)
@@ -117,18 +117,14 @@ public:
         Cooldown,
     }attackStates = AttackStates::DamageEnemy;
     bool facingRight = true;
-    StateMachine GetStateMachine() {
-        return stateMachine;
-    }
     void Flip() {
         facingRight = !facingRight;
     }
-    bool isState(std::string state) {
-        return stateMachine.equals(state);
+    bool IsCurrentState(std::string state) {
+        return stateMachine.IsCurrentState(state);
     }
     void Destroy() {
-        for (auto& key : vKeyMap)
-            key.first.keys.clear();
+        vKeyMap.clear();
         stateMachine.Clear();
         rect.Free();
         mHealth.Free();
@@ -152,7 +148,7 @@ public:
     float nDamage = 0.0f;
 private:
     Vec2f position, prevPosition;
-    std::vector<std::pair<BaseStateMachine::Key, Vec2f>> vKeyMap;
+    std::vector<std::pair<char, Vec2f>> vKeyMap;
     float health = 300.f;
     float distance = 0.0f, angle = 0.0f;
     float speed = 10.0f;

@@ -80,9 +80,10 @@ namespace Structures {
 		float width;
 		float height;
 		void Free() {
-			if (texture)
+			if (texture != nullptr) {
 				texture->Release();
-			texture = nullptr;
+				texture = nullptr;
+			}
 		}
 		~Texture() {}
 	};

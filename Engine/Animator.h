@@ -19,15 +19,10 @@ public:
 	Animator(std::vector<Structures::Texture> images, float duration, bool play = false) {
 		for (int i = 0; i < images.size(); i++) 
 			frames.push_back(Frame(images[i], duration));
-		currentFrame = frames[0];
+		index = 0;
 		notPlayed = true;
 		playOnce = play;
 		start = std::chrono::high_resolution_clock::now();
-	}
-	Animator(const Animator& animator) {
-		frames = animator.frames;
-		playOnce = animator.playOnce;
-		notPlayed = animator.notPlayed;
 	}
 	Structures::Texture UpdateFrames(bool bReverse = false) {
 		if (!bInit)
@@ -37,17 +32,16 @@ public:
 		}
 		now = Clock::now();
 		duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - start);
-		if (duration.count() > currentFrame.duration) {
+		if (duration.count() > frames[index].duration) {
 			start = Clock::now();
 			index += bReverse ? -1 : 1;
 			index %= frames.size();
 			if (notPlayed && index == frames.size() - 1) notPlayed = false;
-			currentFrame = frames[index];
 		}
-		return currentFrame.frame;
+		return frames[index].frame;
 	}
 	Structures::Texture GetCurrentFrame() {
-		return currentFrame.frame;
+		return frames[index].frame;
 	}
 	bool isPlayed() {
 		return !notPlayed;
@@ -62,13 +56,13 @@ public:
 		return frames[ind % frames.size()];
 	}
 	void SetCurrentFrame(int ind) {
-		currentFrame = frames[ind % frames.size()];
+		index = ind % frames.size();
 	}
 	int GetSize() {
 		return frames.size();
 	}
 	Frame GetCurrentFrameRaw() {
-		return currentFrame;
+		return frames[index];
 	}
 	int GetIndex() const {
 		return index;
@@ -82,13 +76,10 @@ public:
 				frame.frame.Free();
 				frame.~Frame();
 			}
-		currentFrame.frame.Free();
-		currentFrame.~Frame();
 		frames.clear();
 	}
 protected:
 	std::vector<Frame> frames;
-	Frame currentFrame;
 	int index = 0;
 	bool notPlayed, playOnce;
 	using Clock = std::chrono::steady_clock;

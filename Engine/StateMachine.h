@@ -87,35 +87,11 @@ inline Vec2f ToScreenCoord(Vec2f pos) {
 
 class BaseStateMachine {
 public:
-	typedef struct Key {
-		std::vector<char> keys;
-		void Add(char c) {
-			keys.push_back(c);
-		}
-		Key(char c) {
-			Add(c);
-		}
-		template<class... Args>
-		Key(char c, Args... args) {
-			Add(c);
-			Add(args...);
-		}
-		bool isPressed() {
-			bool keyPressed = true;
-			std::for_each(keys.begin(), keys.end(), [&, this](char a) {keyPressed &= isKeyPressed(a); });
-			return keyPressed;
-		}
-		bool isReleased() {
-			bool keyPressed = true;
-			std::for_each(keys.begin(), keys.end(), [&, this](char a) {keyPressed &= isKeyReleased(a); });
-			return keyPressed;
-		}
-	}Key;
 	typedef struct StateController {
 		std::function<void()> mFunction;
 		Animator* mAnimator;
 		std::string mStateName;
-		std::vector<BaseStateMachine::Key> mKeys;
+		std::vector<char> mKeys;
 		float cooldown;
 		timePoint tp1;
 		bool activated = true;
@@ -130,7 +106,7 @@ public:
 			}
 		}
 		StateController() = default;
-		StateController(std::function<void()> update, Animator* animator, std::string name, std::vector<Key> keys, float cool) {
+		StateController(std::function<void()> update, Animator* animator, std::string name, std::vector<char> keys, float cool) {
 			mFunction = update;
 			mAnimator = animator;
 			mStateName = name;
@@ -139,54 +115,38 @@ public:
 		};
 	} StateController;
 	const char* GetState() const {
-		return mCurrentState.mStateName.c_str();
+		return states[nCurrentIndex].mStateName.c_str();
 	}
 	void SetState(std::string state) {
-		Animator* animator = new Animator(*mCurrentState.mAnimator);
-		if (animator->shouldPlayOnce() && !animator->isPlayed()) {
-			delete animator;
+		if ((states[nCurrentIndex].mAnimator->shouldPlayOnce() && !states[nCurrentIndex].mAnimator->isPlayed()) || !states[GetStateIndex(state)].activated) {
 			return;
 		}
-		if (!GetStateByName(state).activated) {
-			return;
-		}
-		mPreviousState = mCurrentState;
-		mPreviousState.mAnimator->ResetPlayBool();
-		mCurrentState.mStateName = state;
-		if (animator != nullptr) delete animator;
+		nPrevIndex = nCurrentIndex;
+		states[nPrevIndex].mAnimator->ResetPlayBool();
+		nCurrentIndex = GetStateIndex(state);
 	}
 	StateController GetCurrentState() {
-		std::for_each(states.begin(), states.end(), [&, this](StateController& state) {
-			if (equals(state.mStateName)) {
-				mCurrentState = state;
-			}
-			});
-		return mCurrentState;
+		return states[nCurrentIndex];
 	}
-	StateController GetStateByName(std::string name) {
-		StateController returnState;
-		std::for_each(states.begin(), states.end(), [&, this](StateController& state) {
-			if (strcmp(name.c_str(), state.mStateName.c_str()) == 0) returnState = state;
-			});
-		return returnState;
+	int GetStateIndex(std::string name) {
+		for (int i = 0; i < states.size(); i++)
+			if (states[i].mStateName == name)
+				return i;
+		return 0;
 	}
 	Structures::Texture RenderState() {
-		return GetCurrentState().mAnimator->UpdateFrames();
+		return states[nCurrentIndex].mAnimator->UpdateFrames();
 	}
-	bool equals(std::string state) const {
+	bool IsCurrentState(std::string state) const {
 		return strcmp(GetState(), state.c_str()) == 0;
 	}
-	StateController mCurrentState;
-	StateController mPreviousState;
+	int nCurrentIndex, nPrevIndex;
 	std::vector<StateController> states;
 	void Clear() {
 		for (auto state : states) {
 			std::destroy_at(std::addressof(state.mFunction));
 			state.mAnimator->Free();
 			delete state.mAnimator;
-			for (auto key : state.mKeys) {
-				key.keys.clear();
-			}
 			state.mKeys.clear();
 		}
 		states.clear();
@@ -195,30 +155,23 @@ public:
 
 class StateMachine : public BaseStateMachine {
 public:
-	void AddStateComb(std::function<void()> func, Animator* anim, std::string name, std::vector<Key> keys, float cooldown = 0) {
-		states.push_back(StateController(func, anim, name, keys, cooldown / 1000));
-		mCurrentState = states.back();
-	}
 	void AddState(std::function<void()> func, Animator* anim, std::string name, std::vector<char> keys, float cooldown = 0) {
-		std::vector<Key> container;
-		std::for_each(keys.begin(), keys.end(), [&, this](char& a) {container.push_back(a); });
-		AddStateComb(func, anim, name, container, cooldown);
-		for (auto& key : container)
-			key.keys.clear();
-		container.clear();
+		states.push_back(StateController(func, anim, name, keys, cooldown / 1000));
+		nPrevIndex = (states[nCurrentIndex].mAnimator == nullptr) ? states.size() - 1 : nCurrentIndex;
+		nCurrentIndex = states.size() - 1;
 	}
 	void UpdateState() {
 		std::for_each(states.begin(), states.end(), [&, this](StateController& state) {state.Update(); });
 		try {
-			mCurrentState.mFunction();
+			states[nCurrentIndex].mFunction();
 		}
 		catch (std::bad_function_call& e) {
-			std::cout << e.what() << std::endl;
+			;
 		}
 		std::for_each(states.begin(), states.end(), [&, this](StateController& state) {
 			if (!state.mKeys.empty()) {
 				for (auto& key : state.mKeys) {
-					if (!equals(state.mStateName) && key.isPressed()) {
+					if (!IsCurrentState(state.mStateName) && isKeyPressed(key)) {
 						SetState(state.mStateName);
 					}
 				}
@@ -236,15 +189,16 @@ class AIStateMachine : public BaseStateMachine {
 public:
 	void AddState(std::function<void()> func, Animator* anim, std::string name, float cooldown = 0) {
 		states.push_back(StateController(func, anim, name, {}, cooldown / 1000));
-		mCurrentState = states.back();
+		nPrevIndex = (states[nCurrentIndex].mAnimator == nullptr) ? states.size() - 1 : nCurrentIndex;
+		nCurrentIndex = states.size() - 1;
 	}
 	void UpdateState() {
 		std::for_each(states.begin(), states.end(), [&, this](StateController& state) {state.Update(); });
 		try {
-			mCurrentState.mFunction();
+			states[nCurrentIndex].mFunction();
 		}
 		catch (std::bad_function_call& e) {
-			std::cout << e.what() << std::endl;
+			;
 		}
 	}
 };
