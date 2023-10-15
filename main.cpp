@@ -60,14 +60,12 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     Graphics::InitRasterizer();
     Graphics::InitBlendState();
     Graphics::InitCamera({ 0, 0, 5 });
-    controller.vLevels = {
-        new MainMenu(),
-        new Main(),
-        new Dead(),
-        new Credits(),
-        new Marketplace(),
-        new Win()
-    };
+    controller.vLevels.emplace_back(std::make_unique<MainMenu>());
+    controller.vLevels.emplace_back(std::make_unique<Main>());
+    controller.vLevels.emplace_back(std::make_unique<Dead>());
+    controller.vLevels.emplace_back(std::make_unique<Credits>());
+    controller.vLevels.emplace_back(std::make_unique<Marketplace>());
+    controller.vLevels.emplace_back(std::make_unique<Win>());
     controller.Load();
     Window::windowMessage.message = WM_NULL;
     while (Window::windowMessage.message != WM_QUIT) {
@@ -82,6 +80,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     }
     controller.Unload();
     FreeFontData();
+    controller.vLevels.clear();
     Graphics::swapChain->SetFullscreenState(FALSE, NULL);
     return Window::windowMessage.wParam;
 }

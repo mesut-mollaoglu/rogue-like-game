@@ -315,6 +315,11 @@ public:
 		buy.Free();
 	}
 	inline void LoadData() {
+		if (s.isEmpty()) {
+			for (auto& item : vItems)
+				item.SetLevel(0);
+			c.SetAmount(0);
+		}
 		vItems[0].SetLevel(vItems[0].FindValue(atof(s.ReadBetween(s.FindEnd("Speed: "), s.GetNewLine(1) - 1).c_str())));
 		vItems[1].SetLevel(vItems[1].FindValue(atof(s.ReadBetween(s.FindEnd("Health: "), s.GetNewLine(2) - 1).c_str())));
 		vItems[2].SetLevel(vItems[2].FindValue(atoi(s.ReadBetween(s.FindEnd("Increment: "), s.GetNewLine(3) - 1).c_str())));

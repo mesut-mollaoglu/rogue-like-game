@@ -72,11 +72,10 @@ inline bool getKeyPressed() {
 	return false;
 }
 inline Vec2f GetMousePos() {
-	POINT* pt = new POINT;
-	GetCursorPos(pt);
-	ScreenToClient(GetActiveWindow(), pt);
-	return Vec2f((float)pt->x, (float)pt->y);
-	delete pt;
+	POINT pt;
+	GetCursorPos(&pt);
+	ScreenToClient(GetActiveWindow(), &pt);
+	return Vec2f((float)pt.x, (float)pt.y);
 }
 inline Vec2f ToScreenCoord(Vec2f pos) {
 	Vec2f ret;
@@ -156,7 +155,7 @@ public:
 class StateMachine : public BaseStateMachine {
 public:
 	void AddState(std::function<void()> func, Animator* anim, std::string name, std::vector<char> keys, float cooldown = 0) {
-		states.push_back(StateController(func, anim, name, keys, cooldown / 1000.f));
+		states.emplace_back(StateController(func, anim, name, keys, cooldown / 1000.f));
 		nCurrentIndex = states.size() - 1;
 	}
 	void UpdateState() {
@@ -187,7 +186,7 @@ public:
 class AIStateMachine : public BaseStateMachine {
 public:
 	void AddState(std::function<void()> func, Animator* anim, std::string name, float cooldown = 0) {
-		states.push_back(StateController(func, anim, name, {}, cooldown / 1000.f));
+		states.emplace_back(StateController(func, anim, name, {}, cooldown / 1000.f));
 		nCurrentIndex = states.size() - 1;
 	}
 	void UpdateState() {

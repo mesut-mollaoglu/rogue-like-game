@@ -21,6 +21,15 @@
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
+template <class T> inline void SafeRelease(T** ppT)
+{
+	if (*ppT)
+	{
+		(*ppT)->Release();
+		*ppT = NULL;
+	}
+}
+
 struct Window {
 	static float width;
 	static float height;
@@ -80,10 +89,7 @@ namespace Structures {
 		float width;
 		float height;
 		void Free() {
-			if (texture != nullptr) {
-				texture->Release();
-				texture = nullptr;
-			}
+			SafeRelease(&texture);
 		}
 		~Texture() {}
 	};
@@ -217,7 +223,7 @@ public:
 		ID3D11Texture2D* texture;
 		device->CreateTexture2D(&textureDesc, &textureSubresourceData, &texture);
 		device->CreateShaderResourceView(texture, nullptr, &tex.texture);
-		texture->Release();
+		SafeRelease(&texture);
 		free(testTextureBytes);
 		return tex;
 	}
@@ -231,7 +237,7 @@ public:
 			do {
 				if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
 					std::wstring string(fd.cFileName);
-					images.push_back(LoadTexture(pathName + "\\" + std::string(string.begin(), string.end())));
+					images.emplace_back(LoadTexture(pathName + "\\" + std::string(string.begin(), string.end())));
 				}
 			} while (::FindNextFile(hFind, &fd));
 			::FindClose(hFind);

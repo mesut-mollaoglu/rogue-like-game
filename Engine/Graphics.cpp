@@ -66,10 +66,10 @@ bool Graphics::InitDevices() {
     }
     hr = baseDevice->QueryInterface(__uuidof(ID3D11Device1), (void**)device.GetAddressOf());
     assert(SUCCEEDED(hr));
-    baseDevice->Release();
+    SafeRelease(&baseDevice);
     hr = baseDeviceContext->QueryInterface(__uuidof(ID3D11DeviceContext1), (void**)deviceContext.GetAddressOf());
     assert(SUCCEEDED(hr));
-    baseDeviceContext->Release();
+    SafeRelease(&baseDeviceContext);
 #ifdef DEBUG_BUILD
     ID3D11Debug* d3dDebug = nullptr;
     d3d11Device->QueryInterface(__uuidof(ID3D11Debug), (void**)&d3dDebug);
@@ -80,9 +80,9 @@ bool Graphics::InitDevices() {
         {
             d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
             d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
-            d3dInfoQueue->Release();
+            SafeRelease(&d3dInfoQueue);
         }
-        d3dDebug->Release();
+        SafeRelease(&d3dDebug);
     }
 #endif
     return SUCCEEDED(hr);
@@ -96,12 +96,12 @@ bool Graphics::InitSwapChain() {
     IDXGIAdapter* dxgiAdapter;
     hr = dxgiDevice->GetAdapter(&dxgiAdapter);
     assert(SUCCEEDED(hr));
-    dxgiDevice->Release();
+    SafeRelease(&dxgiDevice);
     DXGI_ADAPTER_DESC adapterDesc;
     dxgiAdapter->GetDesc(&adapterDesc);
     hr = dxgiAdapter->GetParent(__uuidof(IDXGIFactory2), (void**)&dxgiFactory);
     assert(SUCCEEDED(hr));
-    dxgiAdapter->Release();
+    SafeRelease(&dxgiAdapter);
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
     swapChainDesc.Width = 0; 
     swapChainDesc.Height = 0;
@@ -116,7 +116,7 @@ bool Graphics::InitSwapChain() {
     swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
     hr = dxgiFactory->CreateSwapChainForHwnd(device.Get(), Window::windowHandle, &swapChainDesc, 0, 0, &swapChain);
     assert(SUCCEEDED(hr));
-    dxgiFactory->Release();
+    SafeRelease(&dxgiFactory);
     return SUCCEEDED(hr);
 }
 
@@ -126,7 +126,7 @@ bool Graphics::InitRenderTarget() {
     assert(SUCCEEDED(hr));
     hr = device->CreateRenderTargetView(d3d11FrameBuffer, 0, renderTarget.GetAddressOf());
     assert(SUCCEEDED(hr));
-    d3d11FrameBuffer->Release();
+    SafeRelease(&d3d11FrameBuffer);
     return SUCCEEDED(hr);
 }
 
@@ -141,7 +141,7 @@ bool Graphics::CreateVertexShader(ComPtr<ID3D11VertexShader>& shader, std::wstri
             errorString = "Could not compile shader; file not found";
         else if (shaderCompileErrorsBlob) {
             errorString = (const char*)shaderCompileErrorsBlob->GetBufferPointer();
-            shaderCompileErrorsBlob->Release();
+            SafeRelease(&shaderCompileErrorsBlob);
         }
         MessageBoxA(0, errorString, "Shader Compiler Error", MB_ICONERROR | MB_OK);
         return 1;
@@ -155,7 +155,7 @@ bool Graphics::CreateVertexShader(ComPtr<ID3D11VertexShader>& shader, std::wstri
     };
     hr = device->CreateInputLayout(inputElementDesc, ARRAYSIZE(inputElementDesc), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), inputLayout.GetAddressOf());
     assert(SUCCEEDED(hr));
-    vsBlob->Release();
+    SafeRelease(&vsBlob);
     return SUCCEEDED(hr);
 }
 
@@ -170,14 +170,14 @@ bool Graphics::CreatePixelShader(ComPtr<ID3D11PixelShader>& shader, std::wstring
             errorString = "Could not compile shader; file not found";
         else if (shaderCompileErrorsBlob) {
             errorString = (const char*)shaderCompileErrorsBlob->GetBufferPointer();
-            shaderCompileErrorsBlob->Release();
+            SafeRelease(&shaderCompileErrorsBlob);
         }
         MessageBoxA(0, errorString, "Shader Compiler Error", MB_ICONERROR | MB_OK);
         return 1;
     }
     hr = device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, shader.GetAddressOf());
     assert(SUCCEEDED(hr));
-    psBlob->Release();
+    SafeRelease(&psBlob);
     return SUCCEEDED(hr);
 }
 

@@ -46,10 +46,10 @@ inline void FreeFontData() {
 
 inline std::vector<Structures::Vertex> GetRotatedVertex(float width, float height, float depth, float fAngle, float nAspect) {
    std::vector<Structures::Vertex> vertexData;
-   vertexData.push_back(Structures::Vertex{ (-width * cos(fAngle) - height * sin(fAngle)) * nAspect, (-width * sin(fAngle) + height * cos(fAngle)) * nAspect, depth, 0, 0 });
-   vertexData.push_back(Structures::Vertex{ (width * cos(fAngle) + height * sin(fAngle)) * nAspect, (width * sin(fAngle) - height * cos(fAngle)) * nAspect, depth, 1, 1 });
-   vertexData.push_back(Structures::Vertex{ (-width * cos(fAngle) + height * sin(fAngle)) * nAspect, (-width * sin(fAngle) - height * cos(fAngle)) * nAspect, depth, 0, 1 });
-   vertexData.push_back(Structures::Vertex{ (width * cos(fAngle) - height * sin(fAngle)) * nAspect, (width * sin(fAngle) + height * cos(fAngle)) * nAspect, depth, 1, 0 });
+   vertexData.emplace_back(Structures::Vertex{ (-width * cos(fAngle) - height * sin(fAngle)) * nAspect, (-width * sin(fAngle) + height * cos(fAngle)) * nAspect, depth, 0, 0 });
+   vertexData.emplace_back(Structures::Vertex{ (width * cos(fAngle) + height * sin(fAngle)) * nAspect, (width * sin(fAngle) - height * cos(fAngle)) * nAspect, depth, 1, 1 });
+   vertexData.emplace_back(Structures::Vertex{ (-width * cos(fAngle) + height * sin(fAngle)) * nAspect, (-width * sin(fAngle) - height * cos(fAngle)) * nAspect, depth, 0, 1 });
+   vertexData.emplace_back(Structures::Vertex{ (width * cos(fAngle) - height * sin(fAngle)) * nAspect, (width * sin(fAngle) + height * cos(fAngle)) * nAspect, depth, 1, 0 });
    return vertexData;
 }
 
@@ -146,9 +146,9 @@ typedef struct Sprite {
 	   Graphics::deviceContext->DrawIndexed(6, 0, 0);
    }
    void Free() {
-	   constantBuffer->Release(); constantBuffer = nullptr;
-	   vertexBuffer->Release(); vertexBuffer = nullptr;
-	   indexBuffer->Release(); indexBuffer = nullptr;
+	   SafeRelease(&constantBuffer);
+	   SafeRelease(&vertexBuffer);
+	   SafeRelease(&indexBuffer);
 	   mTexture.Free();
    }
 };
@@ -182,11 +182,10 @@ typedef struct HealthBar {
 	   sprite.Draw(FlipHorizontal::NormalHorizontal, FlipVertical::NormalVertical, shader);
    }
    void Free() {
-	   shader->Release();
+	   SafeRelease(shader.ReleaseAndGetAddressOf());
 	   shader.Reset();
 	   sprite.Free();
-	   healthBuffer->Release();
-	   healthBuffer = nullptr;
+	   SafeRelease(&healthBuffer);
    }
 };
 
@@ -229,10 +228,8 @@ typedef struct Text {
 	   if (countLetters(text) > countLetters(mText)) {
 		   bRender = false;
 		   mText = text;
-		   vertexBuffer->Release();
-		   vertexBuffer = nullptr;
-		   indexBuffer->Release();
-		   indexBuffer = nullptr;
+		   SafeRelease(&vertexBuffer);
+		   SafeRelease(&indexBuffer);
 		   Graphics::CreateVertexBuffer(vertexBuffer, BuildVertex(text));
 		   Graphics::CreateIndexBuffer(indexBuffer, BuildIndex(text));
 		   bRender = true;
@@ -262,12 +259,12 @@ typedef struct Text {
 			   xPos += spaceSize;
 		   }
 		   else {
-			   vertices.push_back(Structures::Vertex{ xPos * multiplier, yPos * multiplier, 0.f, Data::fontData[letter].left, 0.0f });
-			   vertices.push_back(Structures::Vertex{ (xPos + Data::fontData[letter].size) * multiplier, (yPos - fontHeight) * multiplier, 0.f, Data::fontData[letter].right, 1.f });
-			   vertices.push_back(Structures::Vertex{ xPos * multiplier, (yPos - fontHeight) * multiplier, 0.f, Data::fontData[letter].left, 1.f });
-			   vertices.push_back(Structures::Vertex{ xPos * multiplier, yPos * multiplier, 0.f, Data::fontData[letter].left, 0.f });
-			   vertices.push_back(Structures::Vertex{ (xPos + Data::fontData[letter].size) * multiplier, yPos * multiplier, 0.f, Data::fontData[letter].right, 0.f });
-			   vertices.push_back(Structures::Vertex{ (xPos + Data::fontData[letter].size) * multiplier, (yPos - fontHeight) * multiplier, 0.f, Data::fontData[letter].right, 1.f });
+			   vertices.emplace_back(Structures::Vertex{ xPos * multiplier, yPos * multiplier, 0.f, Data::fontData[letter].left, 0.0f });
+			   vertices.emplace_back(Structures::Vertex{ (xPos + Data::fontData[letter].size) * multiplier, (yPos - fontHeight) * multiplier, 0.f, Data::fontData[letter].right, 1.f });
+			   vertices.emplace_back(Structures::Vertex{ xPos * multiplier, (yPos - fontHeight) * multiplier, 0.f, Data::fontData[letter].left, 1.f });
+			   vertices.emplace_back(Structures::Vertex{ xPos * multiplier, yPos * multiplier, 0.f, Data::fontData[letter].left, 0.f });
+			   vertices.emplace_back(Structures::Vertex{ (xPos + Data::fontData[letter].size) * multiplier, yPos * multiplier, 0.f, Data::fontData[letter].right, 0.f });
+			   vertices.emplace_back(Structures::Vertex{ (xPos + Data::fontData[letter].size) * multiplier, (yPos - fontHeight) * multiplier, 0.f, Data::fontData[letter].right, 1.f });
 			   xPos += Data::fontData[letter].size + 0.5f;
 		   }
 	   }
@@ -276,7 +273,7 @@ typedef struct Text {
    std::vector<DWORD> BuildIndex(std::string sText) {
 	   std::vector<DWORD> indices;
 	   indexSize = 6 * sText.size();
-	   for (int i = 0; i < indexSize; i++) indices.push_back(static_cast<DWORD>(i));
+	   for (int i = 0; i < indexSize; i++) indices.emplace_back(static_cast<DWORD>(i));
 	   return indices;
    }
    void DrawString() {
@@ -298,11 +295,11 @@ typedef struct Text {
 	   return sum * 40.5f * multiplier;
    }
    void Free() {
-	   shader->Release();
+	   SafeRelease(shader.ReleaseAndGetAddressOf());
 	   shader.Reset();
-	   constantBuffer->Release(); constantBuffer = nullptr;
-	   vertexBuffer->Release(); vertexBuffer = nullptr;
-	   indexBuffer->Release(); indexBuffer = nullptr;
+	   SafeRelease(&constantBuffer);
+	   SafeRelease(&vertexBuffer);
+	   SafeRelease(&indexBuffer);
 	   mFontTex.Free();
    }
 };

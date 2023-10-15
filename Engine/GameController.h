@@ -8,7 +8,7 @@ public:
 	std::chrono::time_point<std::chrono::steady_clock> now;
 	std::chrono::milliseconds duration;
 	int nLevelIndex = 0;
-	std::vector<Level*> vLevels;
+	std::vector<std::unique_ptr<Level>> vLevels;
 	bool bInit = false;
 	void Load();
 	void Unload();

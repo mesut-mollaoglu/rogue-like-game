@@ -40,7 +40,7 @@ struct Powerup {
 	void Free() {
 		std::destroy_at(std::addressof(mEffect));
 		std::destroy_at(std::addressof(mEnd));
-		if (mIcon.mTexture.texture != nullptr) mIcon.Free();
+		mIcon.Free();
 	}
 };
 
@@ -49,15 +49,15 @@ struct Chest {
 	std::vector<Powerup> vPowerups;
 	Powerup currentPowerup;
 	Sprite mSprite;
-	Animator* mAnimator;
+	Animator mAnimator;
 	bool bChestOpened, bNoPowerup;
 	Text text;
 	Chest() {
 		bChestOpened = false;
 		bNoPowerup = true;
-		mAnimator = new Animator(Graphics::LoadFromDir("Assets\\Chest\\frames"), 75, true);
+		mAnimator = Animator(Graphics::LoadFromDir("Assets\\Chest\\frames"), 75, true);
 		mSprite = Sprite();
-		mSprite.SetTexture(mAnimator->GetByIndex(0).frame);
+		mSprite.SetTexture(mAnimator.GetByIndex(0).frame);
 		mSprite.SetPosition({ 3800, 2100 });
 		text = Text("Press 'E' to open.", { 0, 0 }, 0.02f);
 		text.SetPosition(mSprite.position + Vec2f(0, 800) + ToScreenCoord({ 512 - text.GetStringSize(), 368 }));
@@ -81,19 +81,19 @@ struct Chest {
 		if (mFunction) mFunction();
 		bChestOpened = true;
 		bNoPowerup = false;
-		while (mAnimator->GetIndex() < mAnimator->GetSize() - 1)
-			mAnimator->UpdateFrames();
+		while (mAnimator.GetIndex() < mAnimator.GetSize() - 1)
+			mAnimator.UpdateFrames();
 		currentPowerup = *SelectRandomly(vPowerups.begin(), vPowerups.end());
 		assert(currentPowerup.mEffect && currentPowerup.mEnd);
 		currentPowerup.mIcon.SetPosition(mSprite.position);
 	}
 	void CloseChest() {
 		bChestOpened = false;
-		while (mAnimator->GetIndex() > 0)
-			mAnimator->UpdateFrames(true);
+		while (mAnimator.GetIndex() > 0)
+			mAnimator.UpdateFrames(true);
 	}
 	void Render(Vec2f characterPosition) {
-		mSprite.SetTexture(mAnimator->GetCurrentFrame());
+		mSprite.SetTexture(mAnimator.GetCurrentFrame());
 		mSprite.Draw();
 		if (Abs(characterPosition.GetDistance(mSprite.position)) < 1500.f) {
 			if (!bChestOpened)
@@ -110,9 +110,8 @@ struct Chest {
 		text.Free();
 		for (auto& element : vPowerups)
 			element.Free();
-		mAnimator->Free();
+		mAnimator.Free();
 		mSprite.Free();
-		delete mAnimator;
 		if (bNoPowerup || !currentPowerup.mEffect) return;
 		currentPowerup.Free();
 	}
@@ -164,7 +163,7 @@ struct WaveSystem {
 		}
 								 break;
 		case WaveStates::Spawning: {
-			enemies.push_back(GetRandomEntity());
+			enemies.emplace_back(GetRandomEntity());
 			if (IsSameType<RangedEnemy*>(enemies.back().get())) enemies.back()->SetState("Spawn");
 			enemies.back()->SetPosition(SelectSpawnPosition(enemies.back().get()));
 			nCurrentSpawnNumber++;
@@ -220,7 +219,6 @@ struct WaveSystem {
 			for (int i = 0; i < enemies.size(); i++) {
 				enemies[i]->Destroy();
 				enemies[i].reset();
-				enemies.erase(enemies.begin() + i);
 			}
 		enemies.clear();
 	}

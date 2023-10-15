@@ -18,25 +18,18 @@ public:
 	Animator() = default;
 	Animator(std::vector<Structures::Texture> images, float duration, bool play = false) {
 		for (int i = 0; i < images.size(); i++) 
-			frames.push_back(Frame(images[i], duration));
+			frames.emplace_back(Frame(images[i], duration));
 		index = 0;
 		notPlayed = true;
 		playOnce = play;
-		start = std::chrono::high_resolution_clock::now();
+		now = std::chrono::high_resolution_clock::now();
 	}
 	Structures::Texture UpdateFrames(bool bReverse = false) {
-		if (!bInit)
-		{
-			start = now = Clock::now();
-			bInit = true;
-		}
-		now = Clock::now();
-		duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - start);
-		if (duration.count() > frames[index].duration) {
-			start = Clock::now();
+		if (Abs(std::chrono::duration<float>(Clock::now() - now).count()) > frames[index].duration / 1000.f) {
 			index += bReverse ? -1 : 1;
 			index %= frames.size();
 			if (notPlayed && index == frames.size() - 1) notPlayed = false;
+			now = Clock::now();
 		}
 		return frames[index].frame;
 	}
@@ -73,8 +66,7 @@ public:
 	void Free() {
 		if (!frames.empty())
 			for (auto frame : frames) {
-				if(frame.frame.texture != nullptr)
-					frame.frame.Free();
+				frame.frame.Free();
 				frame.~Frame();
 			}
 		frames.clear();
@@ -84,8 +76,5 @@ protected:
 	int index = 0;
 	bool notPlayed, playOnce;
 	using Clock = std::chrono::steady_clock;
-	timePoint start;
 	timePoint now;
-	std::chrono::milliseconds duration;
-	bool bInit = false;
 };
