@@ -75,9 +75,8 @@ struct Vector2D {
     T GetDot(Vector2D<T> vec) {
         return x * vec.x + y * vec.y;
     }
-    void Normalize() {
-        x /= GetLength();
-        y /= GetLength();
+    Vector2D<T> Normalize() {
+        return { x /= GetLength(), y /= GetLength() };
     }
     Vector2D<T> lerp(const Vector2D<T>& vec, T f)
     {

@@ -166,14 +166,14 @@ public:
 		health = 30.f;
 		rect = Sprite();
 		stateMachine.AddState(Spawn, new Animator(Graphics::LoadFromDir("Assets\\RangedEnemy\\spawnAnim"), 200, true), "Spawn");
-		stateMachine.AddState(Attack, new Animator(Graphics::LoadFromDir("Assets\\RangedEnemy\\attackAnim"), 250, true), "Attack", 2000.f);
+		stateMachine.AddState(Attack, new Animator(Graphics::LoadFromDir("Assets\\RangedEnemy\\idleAnim"), 250, true), "Attack", 2000.f);
 		stateMachine.AddState(Dead, new Animator(Graphics::LoadFromDir("Assets\\RangedEnemy\\deadAnim"), 250, true), "Dead");
 		stateMachine.AddState(Idle, new Animator(Graphics::LoadFromDir("Assets\\RangedEnemy\\idleAnim"), 250), "Idle");
 		energyBall = EnergyBall(GetPosition());
 	}
 	static inline std::unique_ptr<Entity> Create() { return std::make_unique<RangedEnemy>(); }
 	std::function<void()> Spawn = [&, this]() {
-		if (AnimEnd()) SetState("Idle");
+		SetState("Idle");
 		nDamage = 0.f;
 	};
 	std::function<void()> Idle = [&, this]() {

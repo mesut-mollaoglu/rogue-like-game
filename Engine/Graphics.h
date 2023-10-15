@@ -67,6 +67,9 @@ namespace Structures {
 	typedef struct Vertex {
 		float x, y, z, u, v;
 	}Vertex;
+	typedef struct Instance {
+		float x, y, z;
+	};
 	typedef struct Projection {
 		XMMATRIX projMatrix;
 		XMMATRIX worldMatrix;
@@ -139,9 +142,9 @@ public:
 	static bool CreatePixelShader(ComPtr<ID3D11PixelShader>& shader, std::wstring shaderFile, std::string function = "main");
 	static void InitCamera(Vec3f fPos);
 	static void UpdateCamera(Vec3f fPos);
-	static inline void CreateVertexBuffer(ID3D11Buffer* &vertexBuffer, std::vector<Structures::Vertex> data) {
+	template <class T> static inline void CreateVertexBuffer(ID3D11Buffer* &vertexBuffer, std::vector<T> data) {
 		D3D11_BUFFER_DESC vertexBufferDesc = {};
-		vertexBufferDesc.ByteWidth = sizeof(Structures::Vertex) * data.size();
+		vertexBufferDesc.ByteWidth = sizeof(T) * data.size();
 		vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
 		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -181,11 +184,11 @@ public:
 		HRESULT hResult = Graphics::device->CreateBuffer(&constantBufferDesc, nullptr, &constantBuffer);
 		assert(SUCCEEDED(hResult));
 	}
-	static inline void MapVertexBuffer(ID3D11Buffer* &vertexBuffer, std::vector<Structures::Vertex> data) {
+	template <class T> static inline void MapVertexBuffer(ID3D11Buffer* &vertexBuffer, std::vector<T> data) {
 		D3D11_MAPPED_SUBRESOURCE resource;
 		Graphics::deviceContext->Map(vertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
-		Structures::Vertex* vertexData = (Structures::Vertex*)resource.pData;
-		for (Structures::Vertex vertex : data) {
+		T* vertexData = (T*)resource.pData;
+		for (T vertex : data) {
 			memcpy(vertexData, &vertex, sizeof(vertex));
 			vertexData++;
 		}

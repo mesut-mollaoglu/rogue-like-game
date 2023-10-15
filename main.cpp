@@ -43,7 +43,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     Window::windowHandle = CreateWindowEx(WS_EX_OVERLAPPEDWINDOW,
         Window::className.c_str(),
         Window::windowName.c_str(),
-        WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME | WS_VISIBLE,
+        WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME ^ WS_MAXIMIZEBOX | WS_VISIBLE,
         CW_USEDEFAULT, CW_USEDEFAULT,
         Window::width,
         Window::height,

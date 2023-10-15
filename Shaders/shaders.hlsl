@@ -20,6 +20,7 @@ cbuffer health : register(b2) {
 struct VS_Input {
     float3 pos : POSITION;
     float2 uv : TEXCOORD;
+    float3 instance : POSITION1;
 };
 
 struct VS_Output {
@@ -34,8 +35,8 @@ VS_Output vs_main(VS_Input input)
 {
     VS_Output output;
     float4x4 worldViewProj = mul(world, mul(view, proj));
-    output.pos = mul(float4(input.pos.x * flipScale.x, input.pos.y * flipScale.y, input.pos.z, 1.0f), worldViewProj);
-    output.pos += float4(position, 0.0f, 0.0f);
+    output.pos = mul(float4(input.pos.xy * flipScale.xy, input.instance.z, 1.0f), worldViewProj);
+    output.pos += float4(position + input.instance.xy, 0.0f, 0.0f);
     output.uv = float2((flipScale.x == -1.0f) ? 1.0f - input.uv.x : input.uv.x, (flipScale.y == -1.0f) ? 1.0f - input.uv.y : input.uv.y);
     return output;
 }

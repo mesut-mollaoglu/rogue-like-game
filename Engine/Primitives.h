@@ -135,7 +135,7 @@ typedef struct Sprite {
 	   }
 	   mTexture = tex;
    }
-   void Draw(FlipHorizontal mHorizontalFlip = FlipHorizontal::NormalHorizontal, FlipVertical mVerticalFlip = FlipVertical::NormalVertical, ComPtr<ID3D11PixelShader> pixelShader = Graphics::pixelShader) {
+   void Prepare(FlipHorizontal mHorizontalFlip = FlipHorizontal::NormalHorizontal, FlipVertical mVerticalFlip = FlipVertical::NormalVertical, ComPtr<ID3D11PixelShader> pixelShader = Graphics::pixelShader) {
 	   Graphics::MapConstantBuffer<Structures::Constants>(constantBuffer, { {position.x / Window::width, position.y / Window::height}, {(mHorizontalFlip == FlipHorizontal::NormalHorizontal) ? 1.0f : -1.0f, (mVerticalFlip == FlipVertical::NormalVertical) ? 1.0f : -1.0f}, {0, 0, 0, 0} });
 	   Graphics::deviceContext->PSSetShader(pixelShader.Get(), nullptr, 0);
 	   Graphics::deviceContext->PSSetShaderResources(0, 1, &mTexture.texture);
@@ -143,6 +143,9 @@ typedef struct Sprite {
 	   Graphics::deviceContext->PSSetConstantBuffers(0, 1, &constantBuffer);
 	   Graphics::deviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	   Graphics::deviceContext->IASetVertexBuffers(0, 1, &vertexBuffer, &Graphics::stride, &Graphics::offset);
+   }
+   void Draw(FlipHorizontal mHorizontalFlip = FlipHorizontal::NormalHorizontal, FlipVertical mVerticalFlip = FlipVertical::NormalVertical, ComPtr<ID3D11PixelShader> pixelShader = Graphics::pixelShader) {
+	   Prepare(mHorizontalFlip, mVerticalFlip, pixelShader);
 	   Graphics::deviceContext->DrawIndexed(6, 0, 0);
    }
    void Free() {
@@ -349,4 +352,44 @@ typedef struct Button {
 	   std::destroy_at(std::addressof(mFunction));
 	   mSprite.Free();
    }
+};
+
+typedef struct ParticleSystem {
+	ID3D11Buffer* instanceBuffer;
+	Sprite sprite;
+	int nInstanceCount;
+	float radius;
+	uint32_t stride;
+	std::vector<Structures::Instance> instances;
+	bool bFinished = false;
+	ParticleSystem() = default;
+	ParticleSystem(std::string particleFile, int particleCount = 5, float nRadius = 2000.f) {
+		radius = nRadius;
+		stride = sizeof(Structures::Instance);
+		nInstanceCount = particleCount;
+		sprite = Sprite();
+		sprite.SetTexture(Graphics::LoadTexture(particleFile));
+		sprite.SetPosition({ 0, 0 });
+		for (int i = 0; i < particleCount; i++) instances.emplace_back(Structures::Instance{0, 0, 0});
+		Graphics::CreateVertexBuffer(instanceBuffer, instances);
+	}
+	void Update() {
+		Graphics::MapVertexBuffer(instanceBuffer, projection(instances));
+	}
+	std::vector<Structures::Instance> projection(std::vector<Structures::Instance> original) {
+		std::vector<Structures::Instance> vec;
+		for (auto& particle : original)
+			vec.push_back({ particle.x / Window::width, particle.y / Window::width, particle.z });
+		return vec;
+	}
+	void Render() {
+		sprite.Prepare();
+		Graphics::deviceContext->IASetVertexBuffers(1, 1, &instanceBuffer, &stride, &Graphics::offset);
+		Graphics::deviceContext->DrawIndexedInstanced(6, nInstanceCount, 0, 0, 0);
+	}
+	void Free() {
+		instances.clear();
+		SafeRelease(&instanceBuffer);
+		sprite.Free();
+	}
 };
