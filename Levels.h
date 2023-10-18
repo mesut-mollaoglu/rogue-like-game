@@ -29,7 +29,6 @@ public:
 		paused.SetPosition(ToScreenCoord({ 512 - paused.GetStringSize(), 40 }));
 		home = Button([&, this]() {nLevel = Level::ManageLevel::GotoLevel; nIndex = 0; }, "Assets\\UI\\Menu\\homeIcon.png", ToScreenCoord({ 312, 384 }));
 		resume = Button([&, this]() {gameState = GameState::GameWorking; }, "Assets\\UI\\Menu\\resumeIcon.png", ToScreenCoord({ 712, 384 }));
-		Graphics::SetStates();
 		gameState = GameState::GameWorking;
 	}
 	void FixedUpdate() override {
@@ -65,7 +64,7 @@ public:
 								   break;
 		}
 	}
-	void Render() override { 
+	void Render() override {
 		Graphics::ClearAndBegin({ 0.f, 0.f, 0.f, 1.0f });
 		switch (gameState) {
 		case GameState::GamePaused: {
@@ -76,7 +75,7 @@ public:
 								  break;
 		case GameState::GameWorking: {
 			std::sort(std::begin(w.enemies), std::end(w.enemies), [&, this]
-			(const auto& e1, const auto &e2) {
+			(const auto& e1, const auto& e2) {
 					return e1->GetPosition().y > e2->GetPosition().y;
 				});
 			mRect.Draw();
@@ -90,7 +89,7 @@ public:
 			character->Render();
 			if (!w.enemies.empty())
 				for (auto& enemy : w.enemies)
-					if(enemy->GetPosition().y <= character->GetPosition().y)
+					if (enemy->GetPosition().y <= character->GetPosition().y)
 						enemy->Render();
 			character->RenderHealth();
 		}
@@ -184,7 +183,6 @@ public:
 		ticks = 150;
 	}
 	void Load() override {
-		Graphics::SetStates();
 		sprite = Sprite();
 		back = Button([&, this]() { nLevel = Level::ManageLevel::GotoLevel; nIndex = 0; }, "Assets\\UI\\Menu\\back.png", ToScreenCoord({ 920, 700 }), 0.5f);
 		sprite.SetTexture(Graphics::LoadTexture("Assets\\UI\\Menu\\credits_screen.png"), 3.0f);
@@ -223,7 +221,6 @@ public:
 		exit = Button([&, this]() { PostQuitMessage(0); }, "Assets\\UI\\Menu\\exit.png", ToScreenCoord({ 512, 525 }), 0.5f);
 		sprite = Sprite();
 		sprite.SetTexture(Graphics::LoadTexture("Assets\\UI\\Menu\\main menu.png"), 4.0f);
-		Graphics::SetStates();
 	}
 	void Render() override {
 		Graphics::ClearAndBegin({ 0.f, 0.f, 0.f, 1.0f });
@@ -279,7 +276,6 @@ public:
 		buy = Button([&, this]() {if (GetTimeLapse(Clock::now(), tp2) < .5f || c.nAmount < (2 << vItems[nItemIndex].nValueIndex)) return;
 		if (vItems[nItemIndex].vValues.size() > (uint64_t)vItems[nItemIndex].nValueIndex + 1) c.SetAmount(c.nAmount - (2 << vItems[nItemIndex].nValueIndex)); vItems[nItemIndex].SetLevel(vItems[nItemIndex].nValueIndex + 1);
 		tp2 = Clock::now(); }, "Assets\\UI\\Market\\buy.png", ToScreenCoord({ 512, 700 }), .5f);
-		Graphics::SetStates();
 	}
 	void Render() override {
 		Graphics::ClearAndBegin({ 0.f, 0.f, 0.f, 1.0f });
@@ -310,6 +306,7 @@ public:
 		back.Free();
 		for (auto& element : vItems)
 			element.Free();
+		vItems.clear();
 		left.Free();
 		right.Free();
 		buy.Free();
@@ -355,7 +352,6 @@ public:
 		text = Text("Win");
 		text.SetPosition(ToScreenCoord({ 512 - text.GetStringSize(), 40 }));
 		next = Button([&, this]() {nLevel = Level::ManageLevel::GotoLevel; nIndex = 0; }, "Assets\\UI\\Menu\\next.png", ToScreenCoord({ 512, 700 }), 0.5f);
-		Graphics::SetStates();
 	}
 	void Render() override {
 		Graphics::ClearAndBegin({ 0.f, 0.f, 0.f, 1.f });
@@ -389,7 +385,6 @@ public:
 		home = Button([&, this]() {nLevel = Level::ManageLevel::GotoLevel; nIndex = 0; }, "Assets\\UI\\Menu\\homeIcon.png", ToScreenCoord({ 712, 384 }));
 		text = Text("You Died");
 		text.SetPosition(ToScreenCoord({ 512 - text.GetStringSize(), 40 }));
-		Graphics::SetStates();
 	}
 	void Render() override {
 		Graphics::ClearAndBegin({ 0.f, 0.f, 0.f, 1.f });

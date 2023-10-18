@@ -16,162 +16,48 @@ constexpr inline float Sqrt(const float& x) noexcept {
 }
 template<class T>
 struct Vector2D {
-    T x;
-    T y;
+    T x, y;
     Vector2D() = default;
-    Vector2D(T xAxis, T yAxis) {
-        x = xAxis;
-        y = yAxis;
-    }
-    void operator=(Vector2D<T> vec) {
-        x = vec.x;
-        y = vec.y;
-    }
-    void operator-=(Vector2D<T> vec) {
-        x -= vec.x;
-        y -= vec.y;
-    }
-    void operator+=(Vector2D<T> vec) {
-        x += vec.x;
-        y += vec.y;
-    }
-    void operator*=(T k) {
-        x *= k;
-        y *= k;
-    }
-    inline bool operator==(Vector2D<T> vec) {
-        return x == vec.x && y == vec.y;
-    }
-    inline bool operator!=(Vector2D<T> vec) {
-        return x != vec.y || y != vec.y;
-    }
-    Vector2D<T> operator*(T k) {
-        Vector2D<T> ret;
-        ret.x = x * k;
-        ret.y = y * k;
-        return ret;
-    }
-    Vector2D<T> operator+(Vector2D<T> vec) {
-        Vector2D<T> ret;
-        ret.x = x + vec.x;
-        ret.y = y + vec.y;
-        return ret;
-    }
-    Vector2D<T> operator-(Vector2D<T> vec) {
-        Vector2D<T> ret;
-        ret.x = x - vec.x;
-        ret.y = y - vec.y;
-        return ret;
-    }
-    T GetLength() {
-        return Sqrt(x * x + y * y);
-    }
-    T GetLengthSq() {
-        return x * x + y * y;
-    }
-    T GetDistance(Vector2D<T> point) {
-        return Sqrt((x - point.x) * (x - point.x) + (y - point.y) * (y - point.y));
-    }
-    T GetDot(Vector2D<T> vec) {
-        return x * vec.x + y * vec.y;
-    }
-    Vector2D<T> Normalize() {
-        return { x /= GetLength(), y /= GetLength() };
-    }
-    Vector2D<T> lerp(const Vector2D<T>& vec, T f)
-    {
-        Vector2D<T> ret;
-        ret.x = Lerp<T>(ret.x, vec.x, f);
-        ret.y = Lerp<T>(ret.y, vec.y, f);
-        return ret;
-    }
-    std::string toString() {
-        return std::to_string(x) + " " + std::to_string(y);
-    }
-    static Vector2D<T> toVector(const std::string& data) {
-        Vector2D<T> ret;
-        std::stringstream ss(data);
-        std::string m_x, m_y;
-        ss >> m_x;
-        ss >> m_y;
-        ret.x = static_cast<T>(atoi(m_x.c_str()));
-        ret.y = static_cast<T>(atoi(m_y.c_str()));
-        return ret;
-    }
+    Vector2D(T xAxis, T yAxis) { x = xAxis; y = yAxis; }
+    void operator=(const Vector2D<T>& vec) { x = vec.x; y = vec.y;}
+    friend void operator-=(Vector2D<T>& vec1, const Vector2D<T>& vec2) { vec1.x -= vec2.x; vec1.y -= vec2.y;}
+    friend void operator+=(Vector2D<T>& vec1, const Vector2D<T>& vec2) { vec1.x += vec2.x; vec1.y += vec2.y; }
+    friend void operator*=(Vector2D<T>& vec, const T& k) {vec.x *= k; vec.y *= k; }
+    friend bool operator==(const Vector2D<T>& vec1, const Vector2D<T>& vec2) {return vec1.x == vec2.x && vec1.y == vec2.y;}
+    friend bool operator!=(const Vector2D<T>& vec1, const Vector2D<T>& vec2) {return vec1.x != vec2.y || vec1.y != vec2.y; }
+    friend Vector2D<T> operator/(const Vector2D<T>& vec1, const Vector2D<T>& vec2) {return Vector2D<T>(vec1.x/vec2.x, vec1.y/vec2.y);}
+    Vector2D<T> operator*(T k) { return { x * k, y * k };}
+    Vector2D<T> operator+(Vector2D<T> vec) {return { x + vec.x, y + vec.y };}
+    Vector2D<T> operator-(Vector2D<T> vec) {return {x - vec.x, y - vec.y}; }
+    T GetLength() { return Sqrt(x * x + y * y); }
+    T GetLengthSq() { return x * x + y * y;}
+    T GetDistance(Vector2D<T> point) { return Sqrt((x - point.x) * (x - point.x) + (y - point.y) * (y - point.y));}
+    T GetDot(Vector2D<T> vec) {return x * vec.x + y * vec.y;}
+    Vector2D<T> Normalize() {return { x /= GetLength(), y /= GetLength() };}
+    Vector2D<T> lerp(const Vector2D<T>& vec, T f) {return { Lerp<T>(x, vec.x, f),  Lerp<T>(y, vec.y, f) };}
+    std::string toString() {return std::to_string(x) + " " + std::to_string(y);}
 };
 typedef Vector2D<float> Vec2f;
 typedef Vector2D<int32_t> Vec2i;
 typedef Vector2D<double> Vec2d;
 template <class T>
 struct Vector3D {
-    T x;
-    T y;
-    T z;
+    T x, y, z;
     Vector3D() = default;
-    Vector3D(T xAxis, T yAxis, T zAxis) {
-        x = xAxis;
-        y = yAxis;
-        z = zAxis;
-    }
-    Vector3D(Vector2D<T> vec, T zAxis) {
-        x = vec.x;
-        y = vec.y;
-        z = zAxis;
-    }
-    Vector2D<T> xy() {
-        return Vector2D<T>(x, y);
-    }
-    void operator=(Vector3D<T> vec) {
-        x = vec.x;
-        y = vec.y;
-        z = vec.z;
-    }
-    void operator-=(Vector3D<T> vec) {
-        x -= vec.x;
-        y -= vec.y;
-        z -= vec.z;
-    }
-    void operator+=(Vector3D<T> vec) {
-        x += vec.x;
-        y += vec.y;
-        z += vec.z;
-    }
-    void operator*=(T k) {
-        x *= k;
-        y *= k;
-        z *= k;
-    }
-    Vector3D<T> operator*(T k) {
-        Vector3D<T> ret;
-        ret.x = x * k;
-        ret.y = y * k;
-        ret.z = z * k;
-        return ret;
-    }
-    T GetLength() {
-        return Sqrt(x * x + y * y + z * z);
-    }
-    T GetLengthSq() {
-        return x * x + y * y + z * z;
-    }
-    T GetDistance(Vector3D<T> point) {
-        return Sqrt((x - point.x) * (x - point.x) + (y - point.y) * (y - point.y) + (z - point.z) * (z - point.z));
-    }
-    T GetDot(Vector3D<T> vec) {
-        return x * vec.x + y * vec.y + z * vec.z;
-    }
-    Vector3D<T> operator-(Vector3D<T> vec) {
-        Vector3D<T> ret;
-        ret.x = x - vec.x;
-        ret.y = y - vec.y;
-        ret.z = z - vec.z;
-        return ret;
-    }
-    void Normalize() {
-        x /= GetLength();
-        y /= GetLength();
-        z /= GetLength();
-    }
+    Vector3D(T xAxis, T yAxis, T zAxis) { x = xAxis; y = yAxis; z = zAxis; }
+    Vector3D(Vector2D<T> vec, T zAxis) { x = vec.x; y = vec.y; z = zAxis; }
+    Vector2D<T> xy() { return Vector2D<T>(x, y); }
+    void operator=(const Vector3D<T>& vec) { x = vec.x; y = vec.y; z = vec.z; }
+    friend void operator-=(Vector3D<T>& vec1, const Vector3D<T>& vec2) { vec1.x -= vec2.x; vec1.y -= vec2.y; vec1.z -= vec2.z; }
+    friend void operator+=(Vector3D<T>& vec1, const Vector3D<T>& vec2) { vec1.x += vec2.x; vec1.y += vec2.y; vec1.z += vec2.z; }
+    friend void operator*=(Vector3D<T>& vec, const T& k) { vec.x *= k; vec.y *= k; vec.z *= k; }
+    inline Vector3D<T> operator*(T k) { return { x * k, y * k, z * k }; }
+    inline T GetLength() {return Sqrt(x * x + y * y + z * z);}
+    inline T GetLengthSq() {return x * x + y * y + z * z; }
+    inline T GetDistance(Vector3D<T> point) {return Sqrt((x - point.x) * (x - point.x) + (y - point.y) * (y - point.y) + (z - point.z) * (z - point.z));}
+    inline T GetDot(Vector3D<T> vec) { return x * vec.x + y * vec.y + z * vec.z; }
+    Vector3D<T> operator-(Vector3D<T> vec) {return { x - vec.x, y - vec.y, z - vec.z };}
+    void Normalize() {x /= GetLength(); y /= GetLength(); z /= GetLength();}
 };
 typedef Vector3D<float> Vec3f;
 typedef Vector3D<int32_t> Vec3i;

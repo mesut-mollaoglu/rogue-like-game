@@ -9,7 +9,6 @@
 #include <wincodec.h>
 #include <memory>
 
-#include <SpriteFont.h>
 #include "Math.h"
 #include <assert.h>
 #include <iostream>

@@ -44,13 +44,13 @@ inline void FreeFontData() {
    delete[] Data::fontData;
 }
 
-inline std::vector<Structures::Vertex> GetRotatedVertex(float width, float height, float depth, float fAngle, float nAspect) {
-   std::vector<Structures::Vertex> vertexData;
-   vertexData.emplace_back(Structures::Vertex{ (-width * cos(fAngle) - height * sin(fAngle)) * nAspect, (-width * sin(fAngle) + height * cos(fAngle)) * nAspect, depth, 0, 0 });
-   vertexData.emplace_back(Structures::Vertex{ (width * cos(fAngle) + height * sin(fAngle)) * nAspect, (width * sin(fAngle) - height * cos(fAngle)) * nAspect, depth, 1, 1 });
-   vertexData.emplace_back(Structures::Vertex{ (-width * cos(fAngle) + height * sin(fAngle)) * nAspect, (-width * sin(fAngle) - height * cos(fAngle)) * nAspect, depth, 0, 1 });
-   vertexData.emplace_back(Structures::Vertex{ (width * cos(fAngle) - height * sin(fAngle)) * nAspect, (width * sin(fAngle) + height * cos(fAngle)) * nAspect, depth, 1, 0 });
-   return vertexData;
+inline std::vector<Structures::Vertex> GetRotatedVertex(float halfWidth, float halfHeight, float depth, float fAngle, float nAspect) {
+	std::vector<Structures::Vertex> vertexData;
+	vertexData.emplace_back(Structures::Vertex{ (-halfWidth * cos(fAngle) - halfHeight * sin(fAngle)) * nAspect, (-halfWidth * sin(fAngle) + halfHeight * cos(fAngle)), depth, 0, 0 });
+	vertexData.emplace_back(Structures::Vertex{ (halfWidth * cos(fAngle) + halfHeight * sin(fAngle)) * nAspect, (halfWidth * sin(fAngle) - halfHeight * cos(fAngle)), depth, 1, 1 });
+	vertexData.emplace_back(Structures::Vertex{ (-halfWidth * cos(fAngle) + halfHeight * sin(fAngle)) * nAspect, (-halfWidth * sin(fAngle) - halfHeight * cos(fAngle)), depth, 0, 1 });
+	vertexData.emplace_back(Structures::Vertex{ (halfWidth * cos(fAngle) - halfHeight * sin(fAngle)) * nAspect, (halfWidth * sin(fAngle) + halfHeight * cos(fAngle)), depth, 1, 0 });
+	return vertexData;
 }
 
 enum class FlipHorizontal {
@@ -68,35 +68,34 @@ typedef struct Rect {
    ID3D11Buffer* vertexBuffer;
    ID3D11Buffer* indexBuffer;
    Structures::Color color;
-   Vec2f fPosition;
+   Vec2f position;
    Vec2i nSize;
-   float fRotation;
-   float nAspect;
+   float rotation;
    Rect() = default;
    Rect(Vec2i size, float fAngle = 0.0f) {
-	   fRotation = fAngle;
-	   nSize = size;
-	   nAspect = Camera::Position.z / Sqrt(Window::width * Window::width + Window::height * Window::height);
 	   std::vector<DWORD> indices = { 0, 1, 2, 0, 3, 1 };
-	   Graphics::CreateVertexBuffer(vertexBuffer, GetRotatedVertex(nSize.x, nSize.y, 0.0f, fRotation, nAspect));
+	   nSize = size;
+	   rotation = fAngle;
+	   Graphics::CreateVertexBuffer(vertexBuffer, GetRotatedVertex(nSize.x, nSize.y, 0.0f, rotation, Window::height/Window::width));
 	   Graphics::CreateIndexBuffer(indexBuffer, indices);
 	   Graphics::CreateConstantBuffer<Structures::Constants>(constantBuffer);
    }
    void Rotate(float angle) {
-	   fRotation += angle;
-	   std::vector<Structures::Vertex> vertexData = GetRotatedVertex(nSize.x, nSize.y, 0.0f, fRotation, nAspect);
-	   Graphics::MapVertexBuffer(vertexBuffer, vertexData);
+	   rotation += angle;
+	   Graphics::MapVertexBuffer(vertexBuffer, GetRotatedVertex(nSize.x, nSize.y, 0.0f, rotation, Window::height / Window::width));
    }
    void SetRotation(float fAngle) {
-	   float rotation = fAngle - fRotation;
+	   float rotation = fAngle - rotation;
 	   if (rotation != 0)
 		   Rotate(rotation);
    }
    void SetPosition(Vec2f fPos) {
-	   Graphics::MapConstantBuffer<Structures::Constants>(constantBuffer, { fPos, {0, 0}, color });
+	   position = fPos;
+	   Graphics::MapConstantBuffer<Structures::Constants>(constantBuffer, { position, {0, 0}, color });
    }
    void SetColor(Structures::Color fColor) {
-	   Graphics::MapConstantBuffer<Structures::Constants>(constantBuffer, { fPosition, {0, 0}, fColor });
+	   color = fColor;
+	   Graphics::MapConstantBuffer<Structures::Constants>(constantBuffer, { position, {0, 0}, color });
    }
    void Draw() {
 	   Graphics::deviceContext->VSSetConstantBuffers(0, 1, &constantBuffer);
@@ -113,7 +112,7 @@ typedef struct Sprite {
    ID3D11Buffer* vertexBuffer;
    ID3D11Buffer* indexBuffer;
    Vec2f position;
-   Structures::Texture mTexture;
+   Structures::Texture texture;
    float sizeMultiplier;
    Sprite() {
 	   sizeMultiplier = 1.f;
@@ -129,16 +128,16 @@ typedef struct Sprite {
 	   Graphics::MapConstantBuffer<Structures::Constants>(constantBuffer, { {position.x / Window::width, position.y / Window::height}, {1, 1}, {0, 0, 0, 0} });
    }
    void SetTexture(Structures::Texture tex, float multiplier = 1.0f) {
-	   if (mTexture.width != tex.width || mTexture.height != tex.height || multiplier != sizeMultiplier) {
+	   if (texture.width != tex.width || texture.height != tex.height || multiplier != sizeMultiplier) {
 		   Graphics::MapVertexBuffer(vertexBuffer, GetRotatedVertex(multiplier * tex.width / tex.height, multiplier, 0.0f, 0.0f, 1.0f));
 		   sizeMultiplier = multiplier;
 	   }
-	   mTexture = tex;
+	   texture = tex;
    }
    void Prepare(FlipHorizontal mHorizontalFlip = FlipHorizontal::NormalHorizontal, FlipVertical mVerticalFlip = FlipVertical::NormalVertical, ComPtr<ID3D11PixelShader> pixelShader = Graphics::pixelShader) {
 	   Graphics::MapConstantBuffer<Structures::Constants>(constantBuffer, { {position.x / Window::width, position.y / Window::height}, {(mHorizontalFlip == FlipHorizontal::NormalHorizontal) ? 1.0f : -1.0f, (mVerticalFlip == FlipVertical::NormalVertical) ? 1.0f : -1.0f}, {0, 0, 0, 0} });
 	   Graphics::deviceContext->PSSetShader(pixelShader.Get(), nullptr, 0);
-	   Graphics::deviceContext->PSSetShaderResources(0, 1, &mTexture.texture);
+	   Graphics::deviceContext->PSSetShaderResources(0, 1, &texture.texture);
 	   Graphics::deviceContext->VSSetConstantBuffers(0, 1, &constantBuffer);
 	   Graphics::deviceContext->PSSetConstantBuffers(0, 1, &constantBuffer);
 	   Graphics::deviceContext->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
@@ -152,7 +151,7 @@ typedef struct Sprite {
 	   SafeRelease(&constantBuffer);
 	   SafeRelease(&vertexBuffer);
 	   SafeRelease(&indexBuffer);
-	   mTexture.Free();
+	   texture.Free();
    }
 };
 
@@ -307,88 +306,133 @@ typedef struct Text {
    }
 };
 
+inline bool PointInSprite(Sprite sprite, Vec2f point) {
+	Vec2f nHalfSize;
+	nHalfSize.x = (sprite.texture.width / sprite.texture.height)* sprite.sizeMultiplier* (Window::height / Window::width);
+	nHalfSize.y = sprite.sizeMultiplier;
+	Vec2f nPosition;
+	nPosition.x = sprite.position.x / Window::width;
+	nPosition.y = sprite.position.y / Window::height;
+	Vec2f mousePosition;
+	mousePosition.x = point.x / Window::width;
+	mousePosition.y = point.y / Window::height;
+	return mousePosition.x < nPosition.x + nHalfSize.x && mousePosition.x > nPosition.x - nHalfSize.x &&
+		mousePosition.y < nPosition.y + nHalfSize.y && mousePosition.y > nPosition.y - nHalfSize.y;
+}
+
 typedef struct Button {
-   Vec2i nSize;
-   Sprite mSprite;
+   Sprite sprite;
    std::function<void()> mFunction;
-   float sizeMultiplier;
    Button() = default;
+   float sizeMultiplier;
    Button(std::function<void()> function, std::string mSource = "", Vec2f pos = { 0, 0 }, float multiplier = 1.0f) {
-	   mFunction = function;
-	   mSprite = Sprite();
-	   mSprite.SetTexture(Graphics::LoadTexture(mSource), multiplier * Window::height / Window::width);
-	   sizeMultiplier = multiplier;
-	   nSize.x = 84 * multiplier * (mSprite.mTexture.width / mSprite.mTexture.height) * (Window::height / Window::width);
-	   nSize.y = 63 * multiplier;
-	   SetPosition(pos);
-   }
-   bool Hover() {
-	   Vec2f mousePos = GetMousePos();
-	   float xPos = (mSprite.position.x / (Camera::Position.z * Window::width) + 1.f) * Window::width / 2.f;
-	   float yPos = Window::height - (mSprite.position.y / (Camera::Position.z * Window::height) + 1.f) * Window::height / 2.f;
-	   return (mousePos.x < xPos + nSize.x && mousePos.x > xPos - nSize.x && mousePos.y < yPos + nSize.y && mousePos.y > yPos - nSize.y);
+		mFunction = function;
+		sprite = Sprite();
+		sizeMultiplier = multiplier * 0.75;
+		sprite.SetTexture(Graphics::LoadTexture(mSource), sizeMultiplier);
+		SetPosition(pos);
    }
    void Update() {
-	   if (Hover()) {
-		   float multiply = sizeMultiplier * Window::height / Window::width;
-		   mSprite.SetTexture(mSprite.mTexture, multiply * 1.1f);
-		   if (isKeyPressed(VK_LBUTTON)) mFunction();
+	   if (PointInSprite(sprite, ToScreenCoord(GetMousePos()))) {
+		   sprite.SetTexture(sprite.texture, sizeMultiplier * 1.1f);
+		   if (GetMouseClick() == Mouse::LeftMouseButton) mFunction();
 	   }
 	   else {
-		   float multiply = sizeMultiplier * Window::height / Window::width;
-		   mSprite.SetTexture(mSprite.mTexture, multiply);
+		   sprite.SetTexture(sprite.texture, sizeMultiplier);
 	   }
    }
    void SetTexture(Structures::Texture image) {
-	   mSprite.SetTexture(image, sizeMultiplier * Window::height / Window::width);
+	   sprite.SetTexture(image, sizeMultiplier);
    }
    void SetPosition(Vec2f pos) {
-	   mSprite.SetPosition(pos);
+	   sprite.SetPosition(pos);
    }
    void Draw() {
-	   mSprite.Draw();
+	   sprite.Draw();
    }
    void Free() {
 	   std::destroy_at(std::addressof(mFunction));
-	   mSprite.Free();
+	   sprite.Free();
    }
+};
+
+struct Particle {
+	Vec2f position;
+	Vec2f velocity;
+	Vec2f acceleration;
+	bool bStopMovement;
+	float distanceCovered;
+	float mass;
+	Vec2f gravityDirection;
+	Particle() = default;
+	void Update(float maxDistance) {
+		if (bStopMovement) return;
+		position += velocity;
+		distanceCovered += velocity.GetLength();
+		float angle = GetAngle(Vec2f(), gravityDirection.Normalize());
+		acceleration = toVector(angle) * 9.81f;
+		acceleration.y *= -1.f;
+		velocity += acceleration;
+		if (!bStopMovement && distanceCovered >= maxDistance) bStopMovement = true;
+	}
+	void AddForce(Vec2f force) {
+		acceleration.x += force.x / mass;
+		acceleration.y += force.y / mass;
+	}
+	virtual ~Particle(){}
 };
 
 typedef struct ParticleSystem {
 	ID3D11Buffer* instanceBuffer;
 	Sprite sprite;
-	int nInstanceCount;
-	float radius;
 	uint32_t stride;
-	std::vector<Structures::Instance> instances;
-	bool bFinished = false;
+	std::vector<Particle> particles;
+	float nMaxDistance;
 	ParticleSystem() = default;
-	ParticleSystem(std::string particleFile, int particleCount = 5, float nRadius = 2000.f) {
-		radius = nRadius;
+	ParticleSystem(std::string particleFile, int particleCount = 5, float maxDistance = 5000.f) {
+		nMaxDistance = maxDistance;
 		stride = sizeof(Structures::Instance);
-		nInstanceCount = particleCount;
 		sprite = Sprite();
 		sprite.SetTexture(Graphics::LoadTexture(particleFile));
 		sprite.SetPosition({ 0, 0 });
-		for (int i = 0; i < particleCount; i++) instances.emplace_back(Structures::Instance{0, 0, 0});
-		Graphics::CreateVertexBuffer(instanceBuffer, instances);
+		particles = PopulateVector(particleCount);
+		Graphics::CreateVertexBuffer(instanceBuffer, projection(particles));
 	}
 	void Update() {
-		Graphics::MapVertexBuffer(instanceBuffer, projection(instances));
+		for (auto& particle : particles) {
+			particle.Update(nMaxDistance);
+			if (particle.bStopMovement) particle = initParticle();
+		}
+		Graphics::MapVertexBuffer(instanceBuffer, projection(particles));
 	}
-	std::vector<Structures::Instance> projection(std::vector<Structures::Instance> original) {
+	std::vector<Particle> PopulateVector(int nParticleCount) {
+		std::vector<Particle> vec;
+		for (int i = 0; i < nParticleCount; i++)
+			vec.emplace_back(initParticle());
+		return vec;
+	}
+	Particle initParticle() {
+		Particle particle = Particle();
+		particle.position = sprite.position;
+		particle.velocity = { float(rand() % 300 - 150), float(rand() % 300 - 150) };
+		particle.gravityDirection = {2.f, -1.f};
+		particle.bStopMovement = false;
+		particle.mass = 2.f;
+		return particle;
+	}
+	std::vector<Structures::Instance> projection(std::vector<Particle> particlesVec) {
 		std::vector<Structures::Instance> vec;
-		for (auto& particle : original)
-			vec.push_back({ particle.x / Window::width, particle.y / Window::width, particle.z });
+		for (auto& particle : particlesVec)
+			vec.push_back({ particle.position.x / Window::width, particle.position.y / Window::width, 0.f });
 		return vec;
 	}
 	void Render() {
 		sprite.Prepare();
 		Graphics::deviceContext->IASetVertexBuffers(1, 1, &instanceBuffer, &stride, &Graphics::offset);
-		Graphics::deviceContext->DrawIndexedInstanced(6, nInstanceCount, 0, 0, 0);
+		Graphics::deviceContext->DrawIndexedInstanced(6, particles.size(), 0, 0, 0);
 	}
 	void Free() {
-		instances.clear();
+		particles.clear();
 		SafeRelease(&instanceBuffer);
 		sprite.Free();
 	}

@@ -37,14 +37,14 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return GetLastError();
     }
     RECT initialRect = { 0, 0, 1024, 768 };
-    AdjustWindowRectEx(&initialRect, WS_OVERLAPPEDWINDOW, FALSE, WS_EX_OVERLAPPEDWINDOW);
+    AdjustWindowRect(&initialRect, WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME ^ WS_MAXIMIZEBOX | WS_VISIBLE, FALSE);
     Window::width = initialRect.right - initialRect.left;
     Window::height = initialRect.bottom - initialRect.top;
     Window::windowHandle = CreateWindowEx(WS_EX_OVERLAPPEDWINDOW,
         Window::className.c_str(),
         Window::windowName.c_str(),
         WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME ^ WS_MAXIMIZEBOX | WS_VISIBLE,
-        CW_USEDEFAULT, CW_USEDEFAULT,
+        100, 100,
         Window::width,
         Window::height,
         0, 0, hInstance, 0);
@@ -66,6 +66,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     controller.vLevels.emplace_back(std::make_unique<Credits>());
     controller.vLevels.emplace_back(std::make_unique<Marketplace>());
     controller.vLevels.emplace_back(std::make_unique<Win>());
+    Graphics::SetStates();
     controller.Load();
     Window::windowMessage.message = WM_NULL;
     while (Window::windowMessage.message != WM_QUIT) {

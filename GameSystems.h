@@ -305,4 +305,5 @@ struct Item {
 	float GetCurrentValue() {
 		return vValues[nValueIndex];
 	}
+	virtual ~Item() {}
 };
